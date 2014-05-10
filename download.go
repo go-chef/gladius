@@ -17,7 +17,7 @@ import (
 const (
 	//  TODO: both of these should be config || detected
 	cookRoot   = "./cookbooks"
-	maxWorkers = 40
+	maxWorkers = 20
 )
 
 // download_item represents the data returned by the api for each file in a cookbook
