@@ -30,7 +30,7 @@ type download_item struct {
 func makedir(dir string, mode os.FileMode) {
 	err := os.MkdirAll(dir, mode)
 	if err != nil {
-		fmt.Println("Error making dir:", err)
+		fmt.Println("Error making dir:", dir, err)
 		os.Exit(1)
 	}
 }
@@ -43,13 +43,13 @@ func worker(id int, queue chan *download_item, client *chef.Chef) {
 		if job == nil {
 			break
 		}
-		fmt.Sprintf("Worker %s, processing %s \n", id, job.Item.Path)
+		fmt.Printf("Worker %d, writing %s/%s \n", id, job.CookPath, job.Item.Path)
 		filePath := fmt.Sprintf("%s/%s", job.CookPath, job.Item.Path)
 		makedir(filepath.Dir(filePath), 0755)
 		out, err := os.Create(filePath)
 		if err != nil {
-			fmt.Println("Error:", err)
-			// TODO: Ack!! Proper error stuffs
+			fmt.Println("Error Openinig file:", filePath, err)
+			// TODO: Should this exit, or how should we handle this?
 			os.Exit(1)
 		}
 		defer out.Close()
@@ -66,17 +66,16 @@ func worker(id int, queue chan *download_item, client *chef.Chef) {
 
 		resp, err := client.Get(u.Path, v)
 		if err != nil {
-			fmt.Println("Got Error requeuing job:", err)
+			fmt.Println("Got Error Getting file from server:", filePath, err)
 		}
 		defer resp.Body.Close()
 
 		_, err = io.Copy(out, resp.Body)
 		if err != nil {
-			// TODO: these should bubble instead of exit
+			// TODO: should these? bubble instead of exit
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
-
 	}
 }
 
