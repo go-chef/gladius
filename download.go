@@ -52,7 +52,6 @@ func worker(id int, queue chan *download_item, client *chef.Chef) {
 			// TODO: Should this exit, or how should we handle this?
 			os.Exit(1)
 		}
-		defer out.Close()
 
 		// pull and assemble the path to this object
 		u, err := url.Parse(job.Item.Url)
@@ -68,7 +67,6 @@ func worker(id int, queue chan *download_item, client *chef.Chef) {
 		if err != nil {
 			fmt.Println("Got Error Getting file from server:", filePath, err)
 		}
-		defer resp.Body.Close()
 
 		_, err = io.Copy(out, resp.Body)
 		if err != nil {
@@ -76,6 +74,9 @@ func worker(id int, queue chan *download_item, client *chef.Chef) {
 			fmt.Println("Error:", err)
 			os.Exit(1)
 		}
+		// explicitly close these in the loop, otherwise we will max file descriptors in osx
+		out.Close()
+		resp.Body.Close()
 	}
 }
 
