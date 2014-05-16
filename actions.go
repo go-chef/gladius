@@ -1,17 +1,18 @@
 // This is mainly a toy meant to explore a worker model in Go, but it solves a runlist and pulls the set of
 // Cookbooks down from a chef-server quite nicely
-package main
+package gladius
 
 import (
-	"encoding/json"
+	_ "encoding/json"
 	"fmt"
-	"github.com/marpaia/chef-golang"
+	"github.com/go-chef/authentication"
+	"github.com/go-chef/chefobjects"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
-	"strings"
+	_ "strings"
 )
 
 const (
@@ -22,7 +23,7 @@ const (
 
 // download_item represents the data returned by the api for each file in a cookbook
 type download_item struct {
-	Item     struct{ chef.CookbookItem }
+	Item     struct{ ChefObject }
 	CookPath string
 }
 
@@ -116,41 +117,4 @@ func Enqueue(cooks map[string]chef.CookbookVersion, client *chef.Chef) {
 		// work complete
 		queue <- nil
 	}
-}
-
-func main() {
-	client, err := chef.Connect()
-	if err != nil {
-		fmt.Println("Error:", err)
-		os.Exit(1)
-	}
-	client.SSLNoVerify = true
-
-	// TODO: make this an arg
-	env, _, err := client.GetEnvironment("_default")
-
-	// TODO: make this an arg
-	runlist_json := `{ "run_list": [ "base"] }`
-	rl := strings.NewReader(runlist_json)
-	if err != nil {
-		fmt.Println("error:", err)
-		os.Exit(1)
-	}
-
-	// TODO: make this an arg
-	endpoint := fmt.Sprintf("/environments/%s/cookbook_versions", env.Name)
-
-	// send the request to the chef server to solve the run_list
-	fmt.Println("Requesting solve for runlist", rl)
-	resp, err := client.Post(endpoint, nil, rl)
-	if err != nil {
-		fmt.Println("error:", err)
-		os.Exit(1)
-	}
-
-	cookbooks := map[string]chef.CookbookVersion{}
-	json.NewDecoder(resp.Body).Decode(&cookbooks)
-
-	// PigThrusters Engage
-	Enqueue(cookbooks, client)
 }
