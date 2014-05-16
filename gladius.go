@@ -21,16 +21,7 @@ func main() {
 	[-f|--file=<configFile>]
 	[-o|--output=<formatter>] 
 	[--version] [--help] 
-  [--]
-
-options:
-	-h, --help 	   
-	--version   
-	-s, --server uri  The server uri to connect to. Include org if you use an org
-	-k, --key    file The keyfile to read (this is your chef-client key)
-	-c, --client name The chef Client name to use when talking to a server
-	-f, --format formatter The Formatter to use (json,txt)
-
+	
 Actions: 
 	solve     Run solver or execute a solve on a server.
 	upload    Upload the object to the server.
