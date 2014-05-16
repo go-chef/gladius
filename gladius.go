@@ -45,8 +45,9 @@ See 'gladius help command' for more info on that command.
 	// switch on the action
 	switch args["<action>"].(string) {
 	case "download":
+
 		// Dispatch to subcomand switch
-	//	download(object, args)
+		// download(object, args)
 	case "upload":
 		fmt.Println("Not Implemented")
 	case "solve":

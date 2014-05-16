@@ -1,0 +1,5 @@
+package chef
+
+import (
+	"testing"
+)
