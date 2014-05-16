@@ -1,31 +1,13 @@
-// This is mainly a toy meant to explore a worker model in Go, but it solves a runlist and pulls the set of
-// Cookbooks down from a chef-server quite nicely
 package gladius
 
 import (
-	_ "encoding/json"
 	"fmt"
-	"github.com/go-chef/authentication"
-	"github.com/go-chef/chefobjects"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"runtime"
-	_ "strings"
 )
-
-const (
-	//  TODO: both of these should be config || detected
-	cookRoot   = "./cookbooks"
-	maxWorkers = 20
-)
-
-// download_item represents the data returned by the api for each file in a cookbook
-type download_item struct {
-	Item     struct{ ChefObject }
-	CookPath string
-}
 
 // makedir is a wrapper on MkdirAll so we don't always have to check return/err
 func makedir(dir string, mode os.FileMode) {

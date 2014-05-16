@@ -36,7 +36,7 @@ Objects:
 See 'gladius help command' for more info on that command.
 `
 
-	args, _ := docopt.Parse(usage, nil, true, "git version 1.7.4.4", true)
+	args, _ := docopt.Parse(usage, nil, true, VERSION, true)
 
 	// Load/Validate the Config
 	// Setup Chef Connection/config
