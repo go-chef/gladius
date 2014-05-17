@@ -22,27 +22,34 @@ func TestNodeWriteToFile(t *testing.T) {
 		"name":     "foo",
 		"run_list": []string{"base", "java"},
 	}
+	spew.Dump(n1)
 
 	tf, _ := ioutil.TempFile("test", "gladius-chef-node")
 	defer tf.Close()
 	defer os.Remove(tf.Name())
 
-	spew.Dump(n1)
-
 	// try to read n1 into b
-	var b []byte
-	if _, err := n1.Read(b); err != nil {
+	if b, err := ioutil.ReadAll(n1); err != nil {
+		// This is being dumped as an empty byte-slice :-(
+		t.Error("non-nill return from ReadAll", err)
+	} else {
 		spew.Dump(b)
+		spew.Dump(err)
 	}
 
 	// because Node has a io.Reader Read() compliant implementation, we can copy out of it
 	// This hangs -- why?
-	if _, err := io.Copy(tf, n1); err != nil {
-		t.Error("could not copy node into tempfile", err)
+	if w, err := io.Copy(tf, n1); err != nil {
+		t.Errorf("could not copy node into tempfile, err: %v, written: %v\n", err, w)
+	} else {
+		spew.Dump(w)
+		spew.Dump(err)
 	}
 
-	if _, err := NodeFromFile(tf.Name()); err != nil {
+	if node, err := NodeFromFile(tf.Name()); err != nil {
 		t.Error("could not reserialize node from tempfile after writing it", err)
+	} else {
+		spew.Dump(node)
 	}
 
 }

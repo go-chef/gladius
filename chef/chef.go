@@ -48,10 +48,10 @@ type ObjectReadWriter struct {
 type Node map[string]interface{}
 
 func (n *Node) Read(p []byte) (size int, err error) {
-	if p, err := json.Marshal(n); err == nil {
-		return len(p), io.EOF
+	if p, err := json.Marshal(n); err != nil {
+		return len(p), err
 	}
-	return len(p), err
+	return len(p), io.EOF
 }
 
 var chefTypeMap = map[string]interface{}{
