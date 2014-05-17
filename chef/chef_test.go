@@ -10,7 +10,7 @@ import (
 
 func TestNodeFromFile(t *testing.T) {
 	if n1, err := NodeFromFile("test/node.json"); err != nil {
-		spew.Dump(err)
+		spew.Dump(n1)
 		t.Fatal(err)
 	}
 }
@@ -29,7 +29,7 @@ func TestNodeWriteToFile(t *testing.T) {
 	// try to read n1 into b
 	if b, err := ioutil.ReadAll(n1); err != nil {
 		// This is being dumped as an empty byte-slice :-(
-		t.Error("non-nill return from ReadAll", err)
+		t.Error("non-nil return from ReadAll", err)
 	} else {
 		spew.Dump(b)
 		spew.Dump(err)
