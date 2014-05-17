@@ -1,17 +1,18 @@
 package chef
 
 import (
-	"os"
+	"encoding/json"
+	"io/ioutil"
 	"path"
 )
 
-func NodeFromFile(filePath string) (node Node, err error) {
+// NodeFromFile reads, decodes and returns a node from filePath, or an error
+func NodeFromFile(filename string) (node Node, err error) {
 	// sanitize the path
-	filePath = path.Clean(filePath)
-	fileBuff, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
+	filename = path.Clean(filename)
+	var b []byte
+	if b, err = ioutil.ReadFile(filename); err == nil {
+		json.Unmarshal(b, &node)
 	}
-	node, err = jsonDecoder(fileBuff)
 	return node, err
 }
