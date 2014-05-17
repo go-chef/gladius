@@ -9,9 +9,7 @@ import (
 )
 
 func TestNodeFromFile(t *testing.T) {
-	n1, err := NodeFromFile("test/node.json")
-	spew.Dump(n1)
-	if err != nil {
+	if n1, err := NodeFromFile("test/node.json"); err != nil {
 		spew.Dump(err)
 		t.Fatal(err)
 	}
