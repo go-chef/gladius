@@ -91,6 +91,8 @@ func maybeChefType(obj map[string]interface{}) (interface{}, error) {
 			var maybeType interface{}
 			if maybeType, ok = chefTypeMap[key]; ok {
 				return maybeType, nil
+			} else {
+				return nil, UninferableType
 			}
 		}
 	}
