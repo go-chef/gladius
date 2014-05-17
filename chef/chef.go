@@ -4,7 +4,6 @@ import (
 	"crypto/rsa"
 	"encoding/json"
 	"errors"
-	"github.com/davecgh/go-spew/spew"
 	"io"
 	"net/http"
 	"net/url"
@@ -49,10 +48,7 @@ type ObjectReadWriter struct {
 type Node map[string]interface{}
 
 func (n *Node) Read(p []byte) (size int, err error) {
-	if p, err := json.Marshal(n); err != nil {
-		spew.Dump(p)
-		return len(p), err
-	}
+	p, err = json.Marshal(n)
 	return len(p), io.EOF
 }
 
