@@ -3,7 +3,6 @@ package chef
 import (
 	"encoding/json"
 	"github.com/davecgh/go-spew/spew"
-	//  "io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -43,4 +42,20 @@ func TestNodeWriteToFile(t *testing.T) {
 		spew.Dump(node)
 	}
 
+}
+
+func TestMaybeChefType(t *testing.T) {
+	n1, err := NodeFromFile("test/node.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, chefType, err := maybeChefType(n1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	if chefType != "Chef::Node" {
+		t.Error("Failed to infer node type")
+	}
 }
