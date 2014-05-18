@@ -47,9 +47,13 @@ type ObjectReadWriter struct {
 // Node is presently arbitrary json data
 type Node map[string]interface{}
 
+//This will probably end up being a private read() and delegating to Object Read
 func (n *Node) Read(p []byte) (size int, err error) {
-	p, err = json.Marshal(n)
-	return len(p), io.EOF
+	if b, err := json.Marshal(&n); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
 }
 
 var chefTypeMap = map[string]interface{}{

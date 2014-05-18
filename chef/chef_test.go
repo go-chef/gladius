@@ -1,11 +1,11 @@
 package chef
 
 import (
-	_ "bytes"
+	"encoding/json"
 	"github.com/davecgh/go-spew/spew"
-	"io"
+	//  "io"
 	"io/ioutil"
-	_ "os"
+	"os"
 	"testing"
 )
 
@@ -24,28 +24,23 @@ func TestNodeWriteToFile(t *testing.T) {
 	}
 	spew.Dump(n1)
 
-	tf, _ := ioutil.TempFile("test", "gladius-chef-node")
+	tf, _ := ioutil.TempFile("", "node-to-file")
 	defer tf.Close()
-	//	defer os.Remove(tf.Name())
+	defer os.Remove(tf.Name())
 
-	// var b = new(bytes.Buffer)
-	// _, err := b.ReadFrom(n1)
-	// spew.Dump("b is", b.String())
-	// spew.Dump("err is", err)
+	// Node can just be Encoded directly now that it implements Read()
+	enc := json.NewEncoder(tf)
+	enc.Encode(n1)
 
-	// // because Node has a io.Reader Read() compliant implementation, we can copy out of it
-	// // This hangs -- why?
-	if w, err := io.Copy(tf, n1); err != nil {
-		t.Errorf("could not copy node into tempfile, err: %v, written: %v\n", err, w)
-	} else {
-		spew.Dump(w)
-		spew.Dump(err)
+	if b, err := ioutil.ReadAll(n1); err != nil {
+		spew.Dump(b)
+		t.Error("error during read from Node", b, err)
 	}
 
-	// if node, err := NodeFromFile(tf.Name()); err != nil {
-	// 	t.Error("could not reserialize node from tempfile after writing it", err)
-	// } else {
-	// 	spew.Dump(node)
-	// }
+	if node, err := NodeFromFile(tf.Name()); err != nil {
+		t.Error("could not reserialize node from tempfile after writing it", err)
+	} else {
+		spew.Dump(node)
+	}
 
 }
