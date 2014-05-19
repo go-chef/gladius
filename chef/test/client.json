@@ -1,0 +1,8 @@
+{
+  "name": "testclient",
+  "public_key": "-----BEGIN PUBLIC KEY-----\nMIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA4QXFuV8PNa7/lgH/CCCp\nEd86dSE2yShhipFOpdQPRg5s3OVveUskLINiNBJZc5Uap8jaIw3mpuWCnA+byFj1\nmW4MFWInxbNgi5psRcgxXJuza/xaqsJGXtqwLjHoo8tMvxSSupGw1y6cPLY246rL\nknGkUXRvC9kz76+OG2coWQWe85uis8YYtqTTWNqonDwqcvQfuH3GhmSgJAG7sXpR\nrMgshbSqQ+hvuHWQc5ZUduXimZdDluqGrUkcUbeD06Z/2GEEWMEZbApUBGllY7eS\nzLW+zPobVpaJtVkyy3vLIKTeB4uvAoQZvu6ou5jN06/xlxobCtupPghHrfEO/ebE\nLQIDAQAB\n-----END PUBLIC KEY-----\n",
+  "validator": false,
+  "admin": false,
+  "json_class": "Chef::ApiClient",
+  "chef_type": "client"
+}
