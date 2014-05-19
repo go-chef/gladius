@@ -50,12 +50,15 @@ func TestMaybeChefType(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	_, chefType, err := maybeChefType(n1)
+	chefType, err := maybeChefType(n1)
 	if err != nil {
 		t.Error(err)
 	}
 
-	if chefType != "Chef::Node" {
-		t.Error("Failed to infer node type")
+	switch chefType.(type) {
+	case Node:
+		// Not gonna do anything cause it's what we want
+	default:
+		t.Error("Could not determine chef type")
 	}
 }
