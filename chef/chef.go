@@ -77,10 +77,10 @@ var ErrUninferableType = errors.New("could not infer type from chef_type or json
 func maybeChefType(obj map[string]interface{}) (interface{}, error) {
 	for key := range obj {
 		switch key {
-		case "chef_type", "json_class":
+		case "json_class":
 			var ok bool
 			var maybeType interface{}
-			if maybeType, ok = chefTypeMap[key]; ok {
+			if maybeType, ok = chefTypeMap[obj[key].(string)]; ok {
 				return maybeType, nil
 			}
 			return nil, ErrUninferableType

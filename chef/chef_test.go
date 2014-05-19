@@ -3,7 +3,6 @@ package chef
 import (
 	"encoding/json"
 	"github.com/davecgh/go-spew/spew"
-	//  "io"
 	"io/ioutil"
 	"os"
 	"testing"
@@ -43,4 +42,23 @@ func TestNodeWriteToFile(t *testing.T) {
 		spew.Dump(node)
 	}
 
+}
+
+func TestMaybeChefType(t *testing.T) {
+	n1, err := NodeFromFile("test/node.json")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	chefType, err := maybeChefType(n1)
+	if err != nil {
+		t.Error(err)
+	}
+
+	switch chefType.(type) {
+	case Node:
+		// Not gonna do anything cause it's what we want
+	default:
+		t.Error("Could not determine chef type")
+	}
 }
