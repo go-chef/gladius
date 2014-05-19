@@ -44,8 +44,68 @@ type ObjectReadWriter struct {
 	ObjectWriter
 }
 
+// ApiClient is presently arbitrary json data
+type ApiClient map[string]interface{}
+
+// Cookbook is presently arbitrary json data
+type Cookbook map[string]interface{}
+
+// Databag is presently arbitrary json data
+type Databag map[string]interface{}
+
+// Environment is presently arbitrary json data
+type Environment map[string]interface{}
+
 // Node is presently arbitrary json data
 type Node map[string]interface{}
+
+// Role is presently arbitrary json data
+type Role map[string]interface{}
+
+//This will probably end up being a private read() and delegating to Object Read
+func (c *ApiClient) Read(p []byte) (size int, err error) {
+	if b, err := json.Marshal(&c); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
+}
+
+//This will probably end up being a private read() and delegating to Object Read
+func (c *Cookbook) Read(p []byte) (size int, err error) {
+	if b, err := json.Marshal(&c); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
+}
+
+//This will probably end up being a private read() and delegating to Object Read
+func (d *Databag) Read(p []byte) (size int, err error) {
+	if b, err := json.Marshal(&d); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
+}
+
+//This will probably end up being a private read() and delegating to Object Read
+func (e *Environment) Read(p []byte) (size int, err error) {
+	if b, err := json.Marshal(&e); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
+}
+
+//This will probably end up being a private read() and delegating to Object Read
+func (r *Role) Read(p []byte) (size int, err error) {
+	if b, err := json.Marshal(&r); err == nil {
+		copy(p, b)
+		return len(p), io.EOF
+	}
+	return len(p), nil
+}
 
 //This will probably end up being a private read() and delegating to Object Read
 func (n *Node) Read(p []byte) (size int, err error) {
@@ -57,7 +117,12 @@ func (n *Node) Read(p []byte) (size int, err error) {
 }
 
 var chefTypeMap = map[string]interface{}{
-	`Chef::Node`: Node{},
+	`Chef::ApiClient`:   ApiClient{},
+	`Chef::Cookbook`:    Cookbook{},
+	`Chef::Databag`:     Databag{},
+	`Chef::Environment`: Environment{},
+	`Chef::Node`:        Node{},
+	`Chef::Role`:        Role{},
 }
 
 // ErrUninferableType allows an implementer to gracefully handle maybeChefType
