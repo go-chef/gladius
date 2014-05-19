@@ -2,12 +2,10 @@ package chef
 
 import (
 	"encoding/json"
-	"github.com/mitchellh/mapstructure"
-	// "github.com/davecgh/go-spew/spew"
+	"fmt"
 	"io/ioutil"
 	"os"
-	// "strings"
-	// "reflect"
+	"reflect"
 	"testing"
 )
 
@@ -72,10 +70,11 @@ func TestDatabagFromFile(t *testing.T) {
 
 func TestNodeWriteToFile(t *testing.T) {
 	n1 := &Node{
-		"name":     "foo",
-		"run_list": []string{"base", "java"},
+		"chef_type":  "node",
+		"json_class": "Chef::Node",
+		"name":       "foo",
+		"run_list":   []string{"base", "java"},
 	}
-	// spew.Dump(n1)
 
 	tf, _ := ioutil.TempFile("", "node-to-file")
 	defer tf.Close()
@@ -86,26 +85,33 @@ func TestNodeWriteToFile(t *testing.T) {
 	enc.Encode(n1)
 
 	if b, err := ioutil.ReadAll(n1); err != nil {
-		// spew.Dump(b)
 		t.Error("error during read from Node", b, err)
 	}
 
-	if _, err := NodeFromFile(tf.Name()); err != nil {
+	n2, err := NodeFromFile(tf.Name())
+	if err != nil {
 		t.Error("could not reserialize node from tempfile after writing it", err)
-	} /*else {
-		spew.Dump(node)
-	}*/
+	}
+
+	if n2[`name`] != "foo" {
+		t.Error("Role name is incorrect")
+	}
+
+	if reflect.DeepEqual(*n1, n2) {
+		t.Error("Starting node does not match read in node")
+	}
 }
 
 func TestRoleWriteToFile(t *testing.T) {
 	r1 := &Role{
-		"name":       "foo",
+		"chef_type": "role",
+		"default_attributes": map[string]string{
+			"ntp": "something",
+			"zoo": "pandabear",
+		},
 		"json_class": "Chef::Role",
-		"chef_type":  "role",
-		// "default_attributes": []byte{
-		// 	"ntp": {"servers": {"ntp1", "ntp2"}},
-		// },
-		"run_list": []string{"base", "java"},
+		"name":       "foo",
+		"run_list":   []string{"base", "java"},
 	}
 
 	tf, _ := ioutil.TempFile("", "role-to-file")
@@ -125,42 +131,127 @@ func TestRoleWriteToFile(t *testing.T) {
 		t.Error("could not reserialize role from tempfile after writing it", err)
 	}
 
-	// eq := reflect.DeepEqual(*r1, r2)
-	// t.Error(eq)
-	// // if eq {
-	// 	t.Error("Imported role does not match exported role")
-	// }
-	// } else {
-	// 	fmt.Println("They're unequal.")
-	// }
-	// if r1 != r2 {
-	// 	t.Error("Imported role does not match exported role")
-	// 	t.Error(r1)
-	// 	t.Error(&r2)
-	// }
-
 	if r2[`name`] != "foo" {
 		t.Error("Role name is incorrect")
 	}
 
-	// var rl1, rl2 RunList
-	// err = mapstructure.Decode(r2, &rl1)
-	// err = mapstructure.Decode(r1, &rl2)
-	// if rl1 != rl2 {
-	// 	t.Error("run_lists do not match")
-	// }
-	// t.Error(rl1.Items)
-	// t.Error(rl2.Items)
-	// if reflect.DeepEqual(rl1.Items, rl2.Items) {
-	// if rl1.Items == rl2.Items {
-	// 	t.Error("run_lists do not match")
-	// }
-	// t.Error(r1[`name`])
-	var r RunList
-	err = mapstructure.Decode(r2, r)
-	for _, v := range r.Items {
-		if v != "base" && v != "java" {
-			t.Error("run_list item is invalid: " + v)
-		}
+	if reflect.DeepEqual(*r1, r2) {
+		t.Error("Starting role does not match read in role")
+	}
+}
+
+func TestEnvironmentWriteToFile(t *testing.T) {
+	e1 := &Environment{
+		"chef_type": "environment",
+		"default_attributes": map[string]string{
+			"ntp": "something",
+			"zoo": "pandabear",
+		},
+		"json_class": "Chef::Environment",
+		"name":       "foo",
+	}
+
+	tf, _ := ioutil.TempFile("", "environment-to-file")
+	defer tf.Close()
+	defer os.Remove(tf.Name())
+
+	// Environment can just be Encoded directly now that it implements Read()
+	enc := json.NewEncoder(tf)
+	enc.Encode(e1)
+
+	if b, err := ioutil.ReadAll(e1); err != nil {
+		t.Error("error during read from environment", b, err)
+	}
+
+	e2, err := EnvironmentFromFile(tf.Name())
+	if err != nil {
+		t.Error("could not reserialize environment from tempfile after writing it", err)
+	}
+
+	if e2[`name`] != "foo" {
+		t.Error("Environment name is incorrect")
+	}
+
+	if reflect.DeepEqual(*e1, e2) {
+		t.Error("Starting environment does not match read in environment")
+	}
+}
+
+func TestApiClientWriteToFile(t *testing.T) {
+	c1 := &ApiClient{
+		"admin":      true,
+		"chef_type":  "client",
+		"json_class": "Chef::ApiClient",
+		"name":       "foo",
+		// Reallly interesting
+		// If we remove run_list for a proper client
+		// DeepEqual = false
+		// When it's in here
+		// DeepEqual = true
+		"run_list":  []string{"base", "java"},
+		"validator": false,
+	}
+
+	tf, _ := ioutil.TempFile("", "client-to-file")
+	defer tf.Close()
+	defer os.Remove(tf.Name())
+
+	// ApiClient can just be Encoded directly now that it implements Read()
+	enc := json.NewEncoder(tf)
+	enc.Encode(c1)
+
+	if b, err := ioutil.ReadAll(c1); err != nil {
+		t.Error("error during read from client", b, err)
+	}
+
+	c2, err := ApiClientFromFile(tf.Name())
+	if err != nil {
+		t.Error("could not reserialize client from tempfile after writing it", err)
+	}
+
+	if c2[`name`] != "foo" {
+		t.Error("ApiClient name is incorrect")
+	}
+
+	if reflect.DeepEqual(*c1, c2) {
+		t.Error("Starting client does not match read in client")
+		t.Error(reflect.TypeOf(*c1))
+		t.Error(fmt.Sprintf("%v", *c1))
+		t.Error(reflect.TypeOf(c2))
+		t.Error(fmt.Sprintf("%v", c2))
+	}
+}
+
+func TestDatabagWriteToFile(t *testing.T) {
+	d1 := &Databag{
+		"chef_type":  "databag",
+		"json_class": "Chef::Databag",
+		"id":         "foo",
+		"data":       []string{"somestuff", "morestuff"},
+	}
+
+	tf, _ := ioutil.TempFile("", "databag-to-file")
+	defer tf.Close()
+	defer os.Remove(tf.Name())
+
+	// Databag can just be Encoded directly now that it implements Read()
+	enc := json.NewEncoder(tf)
+	enc.Encode(d1)
+
+	if b, err := ioutil.ReadAll(d1); err != nil {
+		t.Error("error during read from databag", b, err)
+	}
+
+	d2, err := DatabagFromFile(tf.Name())
+	if err != nil {
+		t.Error("could not reserialize databag from tempfile after writing it", err)
+	}
+
+	if d2[`id`] != "foo" {
+		t.Error("Databag name is incorrect")
+	}
+
+	if reflect.DeepEqual(*d1, d2) {
+		t.Error("Starting databag does not match read in databag")
 	}
 }
