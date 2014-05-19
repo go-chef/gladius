@@ -44,23 +44,25 @@ type ObjectReadWriter struct {
 	ObjectWriter
 }
 
+type ArbitraryJson map[string]interface{}
+
 // ApiClient is presently arbitrary json data
-type ApiClient map[string]interface{}
+type ApiClient ArbitraryJson
 
 // Cookbook is presently arbitrary json data
-type Cookbook map[string]interface{}
+type Cookbook ArbitraryJson
 
 // Databag is presently arbitrary json data
-type Databag map[string]interface{}
+type Databag ArbitraryJson
 
 // Environment is presently arbitrary json data
-type Environment map[string]interface{}
+type Environment ArbitraryJson
 
 // Node is presently arbitrary json data
-type Node map[string]interface{}
+type Node ArbitraryJson
 
 // Role is presently arbitrary json data
-type Role map[string]interface{}
+type Role ArbitraryJson
 
 //This will probably end up being a private read() and delegating to Object Read
 func (c *ApiClient) Read(p []byte) (size int, err error) {

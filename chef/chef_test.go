@@ -2,13 +2,18 @@ package chef
 
 import (
 	"encoding/json"
-	// "fmt"
+	"github.com/mitchellh/mapstructure"
 	// "github.com/davecgh/go-spew/spew"
-	//  "io"
 	"io/ioutil"
 	"os"
+	// "strings"
+	// "reflect"
 	"testing"
 )
+
+type RunList struct {
+	Items []string `mapstructure:"run_list"`
+}
 
 func TestNodeFromFile(t *testing.T) {
 	n1, err := NodeFromFile("test/node.json")
@@ -90,4 +95,72 @@ func TestNodeWriteToFile(t *testing.T) {
 	} /*else {
 		spew.Dump(node)
 	}*/
+}
+
+func TestRoleWriteToFile(t *testing.T) {
+	r1 := &Role{
+		"name":       "foo",
+		"json_class": "Chef::Role",
+		"chef_type":  "role",
+		// "default_attributes": []byte{
+		// 	"ntp": {"servers": {"ntp1", "ntp2"}},
+		// },
+		"run_list": []string{"base", "java"},
+	}
+
+	tf, _ := ioutil.TempFile("", "role-to-file")
+	defer tf.Close()
+	defer os.Remove(tf.Name())
+
+	// Role can just be Encoded directly now that it implements Read()
+	enc := json.NewEncoder(tf)
+	enc.Encode(r1)
+
+	if b, err := ioutil.ReadAll(r1); err != nil {
+		t.Error("error during read from role", b, err)
+	}
+
+	r2, err := RoleFromFile(tf.Name())
+	if err != nil {
+		t.Error("could not reserialize role from tempfile after writing it", err)
+	}
+
+	// eq := reflect.DeepEqual(*r1, r2)
+	// t.Error(eq)
+	// // if eq {
+	// 	t.Error("Imported role does not match exported role")
+	// }
+	// } else {
+	// 	fmt.Println("They're unequal.")
+	// }
+	// if r1 != r2 {
+	// 	t.Error("Imported role does not match exported role")
+	// 	t.Error(r1)
+	// 	t.Error(&r2)
+	// }
+
+	if r2[`name`] != "foo" {
+		t.Error("Role name is incorrect")
+	}
+
+	// var rl1, rl2 RunList
+	// err = mapstructure.Decode(r2, &rl1)
+	// err = mapstructure.Decode(r1, &rl2)
+	// if rl1 != rl2 {
+	// 	t.Error("run_lists do not match")
+	// }
+	// t.Error(rl1.Items)
+	// t.Error(rl2.Items)
+	// if reflect.DeepEqual(rl1.Items, rl2.Items) {
+	// if rl1.Items == rl2.Items {
+	// 	t.Error("run_lists do not match")
+	// }
+	// t.Error(r1[`name`])
+	var r RunList
+	err = mapstructure.Decode(r2, r)
+	for _, v := range r.Items {
+		if v != "base" && v != "java" {
+			t.Error("run_list item is invalid: " + v)
+		}
+	}
 }
