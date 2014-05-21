@@ -3,6 +3,7 @@ package chef
 import (
 	"encoding/json"
 	"github.com/davecgh/go-spew/spew"
+	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"io/ioutil"
 	"log"
@@ -24,11 +25,20 @@ var (
 func TestNodeName(t *testing.T) {
 	n1 := testNodeMapStringInterfaceLol // (*Node)
 	name, err := n1.Name()
-	if err != nil {
-		t.Error("unexpected error from Name() call", err)
-	} else if name != "test" {
-		t.Error("use a fucking assertion library you plonker")
-	}
+	Convey("Node name is 'test'", t, func() {
+		So(name, ShouldEqual, "test")
+		So(err, ShouldBeNil)
+	})
+
+	swordWithoutASheathe := NewNode(&Reader{
+		"foobar": "baz",
+	})
+
+	name, err = swordWithoutASheathe.Name()
+	Convey("Node without a name", t, func() {
+		So(name, ShouldBeEmpty)
+		So(err, ShouldBeNil)
+	})
 }
 
 func TestNodeFromJSONDecoder(t *testing.T) {
