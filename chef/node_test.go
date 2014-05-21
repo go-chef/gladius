@@ -41,6 +41,7 @@ func TestNodeName(t *testing.T) {
 	})
 }
 
+// BUG(fujin): re-do with goconvey
 func TestNodeFromJSONDecoder(t *testing.T) {
 	if file, err := os.Open(testNodeJSON); err != nil {
 		t.Error("unexpected error", err, "during os.Open on", testNodeJSON)
@@ -56,6 +57,7 @@ func TestNodeFromJSONDecoder(t *testing.T) {
 }
 
 // TestNewNode checks the NewNode Reader chain for Type
+// BUG(fujin): re-do with goconvey
 func TestNewNode(t *testing.T) {
 	var v interface{}
 	v = testNodeMapStringInterfaceLol
@@ -69,6 +71,7 @@ func TestNewNode(t *testing.T) {
 }
 
 // TestNodeReadIntoFile tests that Read() can be used to read by io.Readers
+// BUG(fujin): re-do with goconvey
 func TestNodeReadIntoFile(t *testing.T) {
 	n1 := testNodeMapStringInterfaceLol // (*Node)
 	spew.Dump(n1)
