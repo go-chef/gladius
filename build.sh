@@ -1,5 +1,7 @@
 #!/bin/sh
 
+set -e
+
 # Grab dependencies for coveralls.io integration
 go get -u github.com/axw/gocov/gocov
 go get -u github.com/mattn/goveralls
