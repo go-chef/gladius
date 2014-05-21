@@ -10,7 +10,7 @@ type Node struct {
 }
 
 // NativeNode represents the native Go version of the deserialized Node type
-// BUG(fujin): Add other destructing fields like run_list, override attributes
+// BUG(fujin): Add other destructing fields like run_list, override attributes to NativeNode
 type NativeNode struct {
 	Name string `mapstructure:"name"`
 }
