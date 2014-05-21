@@ -82,10 +82,7 @@ func TestNodeReadIntoFile(t *testing.T) {
 	// BUG(fujin): this is currently doing that weird 32768 bytes read thing again.
 	io.Copy(tf, n1)
 
-	// Close tempfile
+	// Close and remove tempfile
 	tf.Close()
-
-	// BUG(fujin): this does not work on Windows despite sanitisation
-	sanePath := path.Clean(tf.Name())
-	os.Remove(sanePath)
+	os.Remove(path.Clean(tf.Name()))
 }
