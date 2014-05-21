@@ -8,6 +8,7 @@ import (
 	"io/ioutil"
 	"log"
 	"os"
+	"path"
 	"testing"
 )
 
@@ -77,8 +78,14 @@ func TestNodeReadIntoFile(t *testing.T) {
 	spew.Dump(n1)
 
 	tf, _ := ioutil.TempFile("test", "node-to-file")
-	defer tf.Close()
-	defer os.Remove(tf.Name())
 	// Copy to tempfile (I use Read() internally)
+	// BUG(fujin): this is currently doing that weird 32768 bytes read thing again.
 	io.Copy(tf, n1)
+
+	// Close tempfile
+	tf.Close()
+
+	// BUG(fujin): this does not work on Windows despite sanitisation
+	sanePath := path.Clean(tf.Name())
+	os.Remove(sanePath)
 }

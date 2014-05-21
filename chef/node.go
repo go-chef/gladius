@@ -17,7 +17,7 @@ type NativeNode struct {
 
 // Name method is pretty cool if you like giving names to stuff
 // Declare a temporary NativeNode, decode the Reader into it and return a copy of the nodes Name
-func (n *Node) Name() (name string, err error) {
+func (n *Node) Name() (string, error) {
 	var node NativeNode
 	return node.Name, mapstructure.Decode(n.Reader, &node)
 }
