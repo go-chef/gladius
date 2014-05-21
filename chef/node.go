@@ -16,14 +16,10 @@ type NativeNode struct {
 }
 
 // Name method is pretty cool if you like giving names to stuff
-// Return a probably not-useful NodeName destructuring struct (say that 3 times fast)
-// Additionally, return the name and any errors
-// SATISFY ALL OF THE INTERFACE
+// Declare a temporary NativeNode, decode the Reader into it and return a copy of the nodes Name
 func (n *Node) Name() (name string, err error) {
-	var nodeName NativeNode
-	err = mapstructure.Decode(n.Reader, &nodeName)
-	name = nodeName.Name
-	return
+	var node NativeNode
+	return node.Name, mapstructure.Decode(n.Reader, &node)
 }
 
 // NewNode wraps a Node around a pointer to a Reader
