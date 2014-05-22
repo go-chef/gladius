@@ -84,7 +84,6 @@ func TestNodeRunList(t *testing.T) {
 func TestNodeAttribute(t *testing.T) {
 	n := testNodeMapStringInterfaceLol
 	attr := n.Normal
-	spew.Dump(attr)
 	// BUG(spheromak): Holy shit this is ugly. Need to do something to make this easier for sure.
 	ugh := attr["openssh"].(map[string]interface{})["server"].(map[string]string)["permit_root_login"]
 	Convey("Node.Normal should map", t, func() {
