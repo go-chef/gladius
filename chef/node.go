@@ -7,13 +7,13 @@ import (
 // Node has a Reader, hey presto
 type Node struct {
 	*Reader
-	*NativeNode
+	*nativeNode
 }
 
 type RunList []string
 
 // NativeNode represents the native Go version of the deserialized Node type
-type NativeNode struct {
+type nativeNode struct {
 	Name      string                 `mapstructure:"name"`
 	RunList   RunList                `mapstructure:"run_list"`
 	Automatic map[string]interface{} `mapstructure:"automatic"`
@@ -24,8 +24,8 @@ type NativeNode struct {
 
 // NewNode wraps a Node around a pointer to a Reader
 func NewNode(reader *Reader) (*Node, error) {
-	node := Node{reader, &NativeNode{}}
-	if err := mapstructure.Decode(reader, node.NativeNode); err != nil {
+	node := Node{reader, &nativeNode{}}
+	if err := mapstructure.Decode(reader, node.nativeNode); err != nil {
 		return nil, err
 	}
 	return &node, nil
