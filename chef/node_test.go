@@ -2,7 +2,6 @@ package chef
 
 import (
 	"encoding/json"
-	"github.com/davecgh/go-spew/spew"
 	. "github.com/smartystreets/goconvey/convey"
 	"io"
 	"io/ioutil"
@@ -107,17 +106,22 @@ func TestNodeFromJSONDecoder(t *testing.T) {
 }
 
 // TestNewNode checks the NewNode Reader chain for Type
-// BUG(fujin): re-do with goconvey
 func TestNewNode(t *testing.T) {
 	var v interface{}
 	v = testNodeMapStringInterfaceLol
-	switch v.(type) {
-	case *Node:
-		t.Log(v, "was correctly identified as pointer to Node type")
-	default:
-		spew.Dump("v", v)
-		t.Error(v, "was not a Node type")
-	}
+	Convey("NewNode should create a Node", t, func() {
+		So(v, ShouldHaveSameTypeAs, &Node{})
+	})
+
+	Convey("NewNode should error if decode fails", t, func() {
+
+		failNode, err := NewNode(&Reader{
+			"name": struct{}{},
+		})
+
+		So(err, ShouldNotBeNil)
+		So(failNode, ShouldBeNil)
+	})
 }
 
 // TestNodeReadIntoFile tests that Read() can be used to read by io.Readers
