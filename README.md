@@ -1,3 +1,5 @@
+[![Build Status](https://drone.io/github.com/go-chef/gladius/status.png)](https://drone.io/github.com/go-chef/gladius/latest)
+
 # gladius
 A set of chef CLI utilities akin to 'knife'  written in go
 
