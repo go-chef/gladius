@@ -7,22 +7,27 @@ import (
 // Node has a Reader, hey presto
 type Node struct {
 	*Reader
+	*nativeNode
 }
+
+type RunList []string
 
 // NativeNode represents the native Go version of the deserialized Node type
-// BUG(fujin): Add other destructing fields like run_list, override attributes to NativeNode
-type NativeNode struct {
-	Name string `mapstructure:"name"`
-}
-
-// Name method is pretty cool if you like giving names to stuff
-// Declare a temporary NativeNode, decode the Reader into it and return a copy of the nodes Name
-func (n *Node) Name() (string, error) {
-	var node NativeNode
-	return node.Name, mapstructure.Decode(n.Reader, &node)
+type nativeNode struct {
+	Name        string                 `mapstructure:"name"`
+	RunList     RunList                `mapstructure:"run_list"`
+	Environment string                 `mapstructure:"chef_environment"`
+	Automatic   map[string]interface{} `mapstructure:"automatic"`
+	Normal      map[string]interface{} `mapstructure:"normal"`
+	Default     map[string]interface{} `mapstructure:"default"`
+	Override    map[string]interface{} `mapstructure:"override"`
 }
 
 // NewNode wraps a Node around a pointer to a Reader
-func NewNode(reader *Reader) *Node {
-	return &Node{reader}
+func NewNode(reader *Reader) (*Node, error) {
+	node := Node{reader, &nativeNode{}}
+	if err := mapstructure.Decode(reader, node.nativeNode); err != nil {
+		return nil, err
+	}
+	return &node, nil
 }
