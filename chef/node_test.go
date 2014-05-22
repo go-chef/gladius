@@ -15,7 +15,7 @@ import (
 var (
 	testNodeJSON = "test/node.json"
 	// FML
-	testNodeMapStringInterfaceLol, err = NewNode(&Reader{
+	testNodeMapStringInterfaceLol, _ = NewNode(&Reader{
 		"name":       "test",
 		"run_list":   []string{"recipe[foo]", "recipe[baz]", "role[banana]"},
 		"chef_type":  "node",
