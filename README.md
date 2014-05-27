@@ -1,4 +1,5 @@
 [![Build Status](https://drone.io/github.com/go-chef/gladius/status.png)](https://drone.io/github.com/go-chef/gladius/latest)
+[![Stories in Ready](https://badge.waffle.io/go-chef/gladius.png?label=ready&title=Ready)](https://waffle.io/go-chef/gladius)
 
 # gladius
 A set of chef CLI utilities akin to 'knife'  written in go
