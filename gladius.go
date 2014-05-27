@@ -41,9 +41,10 @@ func main() {
 	args, _ := docopt.Parse(usage(), nil, true, VERSION, false, true)
 	setlog(args["--loglevel"].(string))
 
-	stderr.Debug("Args: ", spew.Sprint(args))
 	configure(args["--config"].([]string))
 	stderr.Debug("Config: ", spew.Sdump(Config))
+
+	dispatch(args)
 }
 
 // Configure finds, parses, and loads the config.json presented by the cli args. last file loaded wins.
@@ -62,12 +63,14 @@ func configure(files []string) {
 			stderr.Debugf("Couldn't open config: %s\n\t%s", path, err.Error())
 			continue
 		}
+		defer file.Close()
+
 		stderr.Info("Loading Config: ", path)
-		json.NewDecoder(file).Decode(&Config)
+		err = json.NewDecoder(file).Decode(&Config)
 		if err != nil {
-			stderr.Criticalf("Error processing file %s\n  %s", path, err.Error())
+			stderr.Errorf("Error processing file %s\n  %s", path, err)
+			os.Exit(1)
 		}
-		file.Close()
 	}
 }
 
@@ -103,7 +106,7 @@ Options:
   -s <url>, --server <url>         Chef Server URL ex: https://myserver/orgname [default: https://localhost]
   -k <file>, --key <file>          Chef Client key file [default: /etc/chef/admin.pem]
   -c <name>, --client <name>       Chef client name [default: admin]
-  -C <file>, --config <file>       Gladius config file to load can be specified multiple times last file wins. [default: %s/.gladius/config.json .gladius/config.json]
+  -C <file>, --config <file>       Gladius config file to load can be specified multiple times Meges config first to last. [default: %s/.gladius/config.json .gladius/config.json]
   -l <level>, --loglevel           Set output log levels: trace, debug, info, warn, error [default: info]
   --version   Output the version
   -h, --help  Get help text
@@ -117,4 +120,9 @@ Objects:
 `, usr.HomeDir)
 
 	return usage
+}
+
+// dispatch maps the arg commands into their subcommands
+func dispatch(args map[string]interface{}) {
+
 }
