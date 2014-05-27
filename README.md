@@ -23,7 +23,7 @@ I need to make this more generally useful and add it's corollary, upload. right 
 Example:
 Ideally these would be sinlge
 ````
-$ solve -s mychef_server | download -- | upload --server someother_server
+$ solve -s mychef_server | download - | upload --server someother_server
 ````
 I think this sort of tooling has some serious potential.
 ````
