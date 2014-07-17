@@ -6,8 +6,9 @@ import (
 	"fmt"
 	"os"
 	"path/filepath"
+	"strings"
 
-	"github.com/bigkraig/chef"
+	"github.com/go-chef/chef"
 )
 
 type ChefServer struct {
@@ -15,6 +16,7 @@ type ChefServer struct {
 	NodeName  string `json:"node_name"`
 	ClientKey string `json:"client_key"`
 	SkipSSL   bool   `json:"skip_ssl_verify"`
+	Client    *chef.Client
 }
 
 type Configuration struct {
@@ -126,24 +128,28 @@ func ReadConfiguration() (*Configuration, error) {
 
 	decoder := json.NewDecoder(file)
 	err = decoder.Decode(cfg)
+	cfg.cleanup()
 
-	return cfg, err
-}
-
-func (c *Configuration) GenerateChefClients() ([]*chef.Client, error) {
-	chefServers := make([]*chef.Client, len(c.ChefServers))
-
-	for i, chefConfig := range c.ChefServers {
-		c, err := chef.NewClient(&chef.Config{
+	for i, chefConfig := range cfg.ChefServers {
+		client, err := chef.NewClient(&chef.Config{
 			Name:    chefConfig.NodeName,
 			Key:     chefConfig.ClientKey,
 			BaseURL: chefConfig.ServerURL,
 			SkipSSL: chefConfig.SkipSSL,
 		})
 		if err != nil {
-			return chefServers, err
+			return cfg, err
 		}
-		chefServers[i] = c
+		cfg.ChefServers[i].Client = client
 	}
-	return chefServers, nil
+	return cfg, err
+}
+
+func (c *Configuration) cleanup() {
+	if c.GitLabConfiguration.APIURL != "" {
+		// Since the GitLab API (or client) will silently fail if the / is missing.
+		if !strings.HasSuffix(c.GitLabConfiguration.APIURL, "/") {
+			c.GitLabConfiguration.APIURL = c.GitLabConfiguration.APIURL + "/"
+		}
+	}
 }

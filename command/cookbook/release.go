@@ -24,25 +24,17 @@ func ReleaseCommand(env *app.Environment) cli.Command {
 }
 
 /*
- * release-cookbook <cookbook name> <cookbook version> <environment>
+ * release <cookbook name> <cookbook version> <environment>
  *
- * parse config file for chef servers, username, key
- * create clients
  * verify cookbook version exists on all chef servers
  * if not, abort
- * fetch push environment, update version, PUT envirnoment back
+ * fetch environment, update version, write environment
  * fetch all other environments
  *  - in any environment where cookbook is not pinned, pin it to 0.0.0
  */
 func (t *releaseCookbookCommand) Run(c *cli.Context) {
-	chefServers, err := t.env.Config.GenerateChefClients()
-	if err != nil {
-		t.env.Log.Errorln("Error generating chef client:", err)
-		os.Exit(1)
-	}
-
-	for _, chef := range chefServers {
-		nodes, err := chef.Nodes.List()
+	for _, chef := range t.env.Config.ChefServers {
+		nodes, err := chef.Client.Nodes.List()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

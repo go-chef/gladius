@@ -11,8 +11,9 @@ func CookbookCommand(env *app.Environment) cli.Command {
 		Name:  "cookbook",
 		Usage: "Cookbook commands",
 		Subcommands: []cli.Command{
-			cookbookcommand.JenkinsTestCommand(env),
+			cookbookcommand.TestCommand(env),
 			cookbookcommand.ReleaseCommand(env),
+			cookbookcommand.JenkinsCICommand(env),
 		},
 	}
 

@@ -10,7 +10,7 @@ import (
 
 var log = logrus.New()
 
-func Execute(workspace string, command ...string) int {
+func Execute(command ...string) int {
 	log.Infoln("...running", strings.Join(command, " "))
 
 	var cmd *exec.Cmd
@@ -19,10 +19,6 @@ func Execute(workspace string, command ...string) int {
 		cmd = exec.Command(command[0], command[1:]...)
 	} else {
 		cmd = exec.Command(command[0])
-	}
-
-	if workspace != "" {
-		cmd.Dir = workspace
 	}
 
 	stdout, _ := cmd.StdoutPipe()
