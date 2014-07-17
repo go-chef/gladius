@@ -16,7 +16,6 @@ import (
 type JenkinsCIContext struct {
 	log *logrus.Logger
 	cfg *app.Configuration
-	env *lib.JenkinsEnvironment
 
 	ProjectID   int
 	ProjectName string
@@ -75,14 +74,13 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	// and detect which type through the jenkins environment variables
 	gitLabClient := lib.NewGitLabClient(j.cfg.APIURL, j.cfg.APISecret)
 	log := j.log
-	env := j.env
 
 	environment, err := lib.NewJenkinsEnvironment()
 	if err != nil {
 		log.Errorln(err)
 		syscall.Exit(1)
 	}
-	j.env = environment
+	env := environment
 
 	j.ProjectName, j.GroupName, j.BranchName, err = parseJobName(env.JobName)
 	if err != nil {
@@ -96,13 +94,13 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		syscall.Exit(1)
 	}
 
-	commit, err := gitLabClient.FindCommit(j.env.GitCommit, j.ProjectID)
+	commit, err := gitLabClient.FindCommit(env.GitCommit, j.ProjectID)
 	if err != nil {
 		log.Errorln(err)
 		syscall.Exit(1)
 	}
 	log.Infoln(fmt.Sprintf("Testing commit %s (%s) for %s/%s",
-		gitlab.Stringify(commit.Title), j.env.GitCommit[0:9], j.GroupName, j.ProjectName))
+		gitlab.Stringify(commit.Title), env.GitCommit[0:9], j.GroupName, j.ProjectName))
 
 	if isJenkinsCommit(commit) {
 		log.Infoln("Commit was done by Jenkins, skipping build")
@@ -126,7 +124,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	// scan merge request commits for version change -- check merge request comments for version regex
 	// if neither, then bump cookbook version and commit
 
-	cookbook, err := lib.NewCookbook(gitLabClient, j.ProjectID, j.env.GitCommit)
+	cookbook, err := lib.NewCookbook(gitLabClient, j.ProjectID, env.GitCommit)
 	if err != nil {
 		log.Errorln(err)
 		syscall.Exit(1)
@@ -154,7 +152,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	// The install and update commands dont get the custom berks configuration
 	// This may be an issue if the cookbook expects to be able to read from our internal chef server
 	// It's a complication when there are multiple chef servers to read cookbooks from
-	if lib.NeedBerkshelfInstall(j.env.Workspace) {
+	if lib.NeedBerkshelfInstall(env.Workspace) {
 		log.Infoln("Executing Berkshelf install step")
 		if errs := lib.Execute("berks", "install"); errs > 0 {
 			log.Errorln("Berkshelf install failed!")
@@ -170,7 +168,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 
 	log.Infoln("Executing Berkshelf upload step")
 	for _, chefServer := range j.cfg.ChefServers {
-		file, err := lib.GenerateBerkshelfConfiguration(j.env.Workspace, &chefServer)
+		file, err := lib.GenerateBerkshelfConfiguration(env.Workspace, &chefServer)
 		if err != nil {
 			log.Errorln(err)
 			syscall.Exit(1)

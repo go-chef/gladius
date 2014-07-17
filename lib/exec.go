@@ -11,6 +11,7 @@ import (
 var log = logrus.New()
 
 func Execute(command ...string) int {
+	log.Formatter = &logrus.TextFormatter{ForceColors: true}
 	log.Infoln("...running", strings.Join(command, " "))
 
 	var cmd *exec.Cmd
