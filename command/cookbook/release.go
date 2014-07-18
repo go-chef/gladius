@@ -2,22 +2,25 @@ package cookbookcommand
 
 import (
 	"fmt"
-	"os"
+	"syscall"
 
+	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/go-chef/gladius/app"
 )
 
-type releaseCookbookCommand struct {
-	env *app.Environment
+type ReleaseContext struct {
+	log *logrus.Logger
+	cfg *app.Configuration
 }
 
 func ReleaseCommand(env *app.Environment) cli.Command {
-	c := &releaseCookbookCommand{env: env}
+	c := &ReleaseContext{log: env.Log, cfg: env.Config}
 	cmd := &cli.Command{
-		Name:   "release",
-		Usage:  "Releases a cookbook to a Chef environment",
-		Action: c.Run,
+		Name:        "release",
+		Description: "Pins the cookbook version in the specified environment",
+		Usage:       "<cookbook name> <cookbook version> <environment>",
+		Action:      c.Run,
 	}
 
 	return *cmd
@@ -32,13 +35,68 @@ func ReleaseCommand(env *app.Environment) cli.Command {
  * fetch all other environments
  *  - in any environment where cookbook is not pinned, pin it to 0.0.0
  */
-func (t *releaseCookbookCommand) Run(c *cli.Context) {
-	for _, chef := range t.env.Config.ChefServers {
-		nodes, err := chef.Client.Nodes.List()
+func (r *ReleaseContext) Run(c *cli.Context) {
+	log := r.log
+	if len(c.Args()) < 3 {
+		cli.ShowCommandHelp(c, c.Command.Name)
+		return
+	}
+	cookbookName := c.Args()[0]
+	cookbookVersion := c.Args()[1]
+	environmentName := c.Args()[2]
+
+	// First, sanity checks
+	for _, chef := range r.cfg.ChefServers {
+		_, err := chef.Client.Environments.Get(environmentName)
 		if err != nil {
-			fmt.Println(err)
-			os.Exit(1)
+			log.Errorln(fmt.Sprintf("%s does not exist on %s.", environmentName, chef.ServerURL))
+			syscall.Exit(1)
 		}
-		fmt.Println(nodes)
+
+		cookbook, err := chef.Client.Cookbooks.GetVersion(cookbookName, cookbookVersion)
+		if err != nil {
+			log.Errorln(fmt.Sprintf("%s[%s] does not exist on %s.", cookbookName, cookbookVersion, chef.ServerURL))
+			syscall.Exit(1)
+		}
+		if cookbook.Name == "" {
+			log.Errorln(fmt.Sprintf("%s[%s] does not exist on %s.", cookbookName, cookbookVersion, chef.ServerURL))
+			syscall.Exit(1)
+		}
+
+	}
+
+	for _, chef := range r.cfg.ChefServers {
+		environments, err := chef.Client.Environments.List()
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+
+		for thisEnvironment, _ := range *environments {
+			if thisEnvironment == "_default" {
+				continue
+			}
+			chefEnvironment, err := chef.Client.Environments.Get(thisEnvironment)
+			if err != nil {
+				log.Errorln(err)
+				syscall.Exit(1)
+			}
+
+			if chefEnvironment.CookbookVersions[cookbookName] == "" {
+				chefEnvironment.CookbookVersions[cookbookName] = "0.0.0"
+			} else if thisEnvironment == environmentName {
+				chefEnvironment.CookbookVersions[cookbookName] = cookbookVersion
+			} else {
+				continue
+			}
+
+			log.Infoln(fmt.Sprintf("Pinning %s[%s] in %s on %s", cookbookName,
+				chefEnvironment.CookbookVersions[cookbookName], thisEnvironment, chef.ServerURL))
+			err = chef.Client.Environments.Put(chefEnvironment)
+			if err != nil {
+				log.Errorln("err", err)
+				syscall.Exit(1)
+			}
+		}
 	}
 }
