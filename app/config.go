@@ -12,11 +12,11 @@ import (
 )
 
 type ChefServer struct {
-	ServerURL string `json:"server_url"`
-	NodeName  string `json:"node_name"`
-	ClientKey string `json:"client_key"`
-	SkipSSL   bool   `json:"skip_ssl_verify"`
-	Client    *chef.Client
+	ServerURL string       `json:"server_url"`
+	NodeName  string       `json:"node_name"`
+	ClientKey string       `json:"client_key"`
+	SkipSSL   bool         `json:"skip_ssl_verify"`
+	Client    *chef.Client `json:"_,omitempty"`
 }
 
 type Configuration struct {
