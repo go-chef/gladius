@@ -45,26 +45,6 @@ func (r *ReleaseContext) Run(c *cli.Context) {
 	cookbookVersion := c.Args()[1]
 	environmentName := c.Args()[2]
 
-	// First, sanity checks
-	for _, chef := range r.cfg.ChefServers {
-		_, err := chef.Client.Environments.Get(environmentName)
-		if err != nil {
-			log.Errorln(fmt.Sprintf("%s does not exist on %s.", environmentName, chef.ServerURL))
-			syscall.Exit(1)
-		}
-
-		cookbook, err := chef.Client.Cookbooks.GetVersion(cookbookName, cookbookVersion)
-		if err != nil {
-			log.Errorln(fmt.Sprintf("%s[%s] does not exist on %s.", cookbookName, cookbookVersion, chef.ServerURL))
-			syscall.Exit(1)
-		}
-		if cookbook.Name == "" {
-			log.Errorln(fmt.Sprintf("%s[%s] does not exist on %s.", cookbookName, cookbookVersion, chef.ServerURL))
-			syscall.Exit(1)
-		}
-
-	}
-
 	for _, chef := range r.cfg.ChefServers {
 		environments, err := chef.Client.Environments.List()
 		if err != nil {
