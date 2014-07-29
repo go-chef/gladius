@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"strings"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
@@ -27,8 +28,6 @@ const (
 	versionCommitMessageRegex = `.*@(\d+)\.(\d+)\.(\d+).*`
 	jenkinsCommitMessage      = "Tagged %d.%d.%d"
 	jenkinsCommitMessageRegex = `Tagged \d+\.\d+\.\d+`
-	// matches projectname__groupname and projectname__groupname__branchname
-	jenkinsJobNameRegex = `([^_]+)__([^_]+)(?:__(\S+))*`
 )
 
 func JenkinsCICommand(env *app.Environment) cli.Command {
@@ -43,18 +42,20 @@ func JenkinsCICommand(env *app.Environment) cli.Command {
 }
 
 func parseJobName(jobName string) (projectName, groupName, branchName string, err error) {
-	reg, err := regexp.Compile(jenkinsJobNameRegex)
-	if err != nil {
+	parts := strings.Split(jobName, "__")
+
+	if len(parts) < 2 && len(parts) > 3 {
+		err = errors.New(fmt.Sprintf("Unable to determine job name from %s", jobName))
 		return
 	}
-	matches := reg.FindAllStringSubmatch(jobName, -1)
-	if len(matches) < 1 {
-		err = errors.New(fmt.Sprintf("Unable to match %s against the job %s", jenkinsJobNameRegex, jobName))
-		return
+
+	groupName = parts[0]
+	projectName = parts[1]
+
+	if len(parts) == 3 {
+		branchName = parts[2]
 	}
-	groupName = matches[0][1]
-	projectName = matches[0][2]
-	branchName = matches[0][3]
+
 	return
 }
 
@@ -88,6 +89,23 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		syscall.Exit(1)
 	}
 
+	cbMetadata, err := lib.NewCookbookFromMetadata(env.Workspace)
+	if err != nil {
+		log.Errorln(err)
+		return
+	}
+
+	// Strip the kitchen platforms that are not supported by this cookbook
+	platforms := []app.Platform{}
+	for _, platform := range j.cfg.TestKitchenConfiguration.Platforms {
+		for _, supported := range cbMetadata.Supports {
+			if strings.HasPrefix(platform.Name, supported) {
+				platforms = append(platforms, platform)
+			}
+		}
+	}
+	j.cfg.TestKitchenConfiguration.Platforms = platforms
+
 	j.ProjectID, err = gitLabClient.FindProject(j.ProjectName, j.GroupName)
 	if err != nil {
 		log.Errorln(err)
@@ -107,8 +125,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		return
 	}
 
-	// maybe there is a better way to run this other command
-	testSuite := &testContext{
+	testSuite := &TestContext{
 		cfg: j.cfg,
 		log: log,
 	}
@@ -179,4 +196,12 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 			syscall.Exit(errs)
 		}
 	}
+
+	// Release the cookbook to the development environment
+	log.Infoln(fmt.Sprintf("Releasing %s to 'development'", j.ProjectName))
+	releaseCookbook := &ReleaseContext{
+		cfg: j.cfg,
+		log: log,
+	}
+	releaseCookbook.Do(j.ProjectName, cbMetadata.Version(), "development")
 }

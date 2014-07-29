@@ -13,6 +13,7 @@ func main() {
 	log.Formatter = &logrus.TextFormatter{ForceColors: true}
 	app := cli.NewApp()
 	app.Name = "gladius"
+	app.Usage = "it does stuff"
 	app.Commands = GenerateCommands()
 	app.Run(os.Args)
 }

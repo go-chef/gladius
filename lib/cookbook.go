@@ -2,20 +2,19 @@ package lib
 
 import (
 	"bufio"
+	"errors"
 	"fmt"
-	"regexp"
+	"io"
+	"os"
 	"strconv"
 	"strings"
-)
-
-const (
-	metadataVersionRegex = `version.*'(\d+)\.(\d+)\.(\d+)'.*`
 )
 
 type Cookbook struct {
 	majorVersion int
 	minorVersion int
 	patchVersion int
+	Supports     []string
 }
 
 func (c *Cookbook) Version() string {
@@ -23,20 +22,22 @@ func (c *Cookbook) Version() string {
 }
 
 func (c *Cookbook) ParseVersionString(s string) (err error) {
-	re := regexp.MustCompile(metadataVersionRegex)
-	m := re.FindStringSubmatch(s)
+	parts := strings.Split(s, ".")
+	if len(parts) != 3 {
+		return errors.New(fmt.Sprintf("Unable to parse version from %s", s))
+	}
 
-	c.majorVersion, err = strconv.Atoi(m[1])
+	c.majorVersion, err = strconv.Atoi(parts[0])
 	if err != nil {
 		return
 	}
 
-	c.minorVersion, err = strconv.Atoi(m[2])
+	c.minorVersion, err = strconv.Atoi(parts[1])
 	if err != nil {
 		return
 	}
 
-	c.patchVersion, err = strconv.Atoi(m[3])
+	c.patchVersion, err = strconv.Atoi(parts[2])
 	if err != nil {
 		return
 	}
@@ -44,18 +45,44 @@ func (c *Cookbook) ParseVersionString(s string) (err error) {
 	return
 }
 
-func NewCookbook(c *GitLabClient, projectID int, gitCommit string) (*Cookbook, error) {
+func NewCookbookFromReader(r io.Reader) *Cookbook {
 	cookbook := &Cookbook{}
-	metadataContents, _, err := c.Projects.GetFileContents(projectID, gitCommit, "metadata.rb")
-	if err != nil {
-		return cookbook, err
-	}
-	scanner := bufio.NewScanner(metadataContents)
+	scanner := bufio.NewScanner(r)
 	for scanner.Scan() {
 		line := scanner.Text()
-		if strings.HasPrefix(line, "version") {
-			cookbook.ParseVersionString(line)
+		spaceparts := strings.Split(line, " ")
+		switch spaceparts[0] {
+		case "version":
+			parts := strings.Split(line, "'")
+			if len(parts) > 1 {
+				_ = cookbook.ParseVersionString(parts[1])
+			}
+		case "supports":
+			parts := strings.Split(line, "'")
+			if len(parts) > 1 {
+				cookbook.Supports = append(cookbook.Supports, parts[1])
+			}
 		}
 	}
+	return cookbook
+}
+
+func NewCookbookFromMetadata(path string) (*Cookbook, error) {
+	file, err := os.Open(fmt.Sprintf("%s%c%s", path, os.PathSeparator, "metadata.rb"))
+	if err != nil {
+		return nil, err
+	}
+	defer file.Close()
+
+	cookbook := NewCookbookFromReader(file)
+	return cookbook, nil
+}
+
+func NewCookbook(c *GitLabClient, projectID int, gitCommit string) (*Cookbook, error) {
+	metadataContents, _, err := c.Projects.GetFileContents(projectID, gitCommit, "metadata.rb")
+	if err != nil {
+		return nil, err
+	}
+	cookbook := NewCookbookFromReader(metadataContents)
 	return cookbook, nil
 }

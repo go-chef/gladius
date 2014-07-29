@@ -10,7 +10,7 @@ import (
 	"github.com/go-chef/gladius/lib"
 )
 
-type testContext struct {
+type TestContext struct {
 	log *logrus.Logger
 	cfg *app.Configuration
 
@@ -18,7 +18,7 @@ type testContext struct {
 }
 
 func TestCommand(env *app.Environment) cli.Command {
-	c := &testContext{
+	c := &TestContext{
 		cfg: env.Config,
 		log: env.Log,
 	}
@@ -35,7 +35,7 @@ func TestCommand(env *app.Environment) cli.Command {
  * test takes no parameters
  *
  */
-func (t *testContext) Run(c *cli.Context) {
+func (t *TestContext) Run(c *cli.Context) {
 
 	quickErrors := 0
 
@@ -57,6 +57,15 @@ func (t *testContext) Run(c *cli.Context) {
 		quickErrors += errs
 	} else {
 		t.log.Infoln("RuboCop tests passed!")
+	}
+
+	// Run rspec
+	t.log.Infoln("Executing RSpec")
+	if errs := lib.Execute("rspec", "-c", "-fd"); errs > 0 {
+		t.log.Errorln("RSpec tests failed!")
+		quickErrors += errs
+	} else {
+		t.log.Infoln("RSpec tests passed!")
 	}
 
 	// If we failed any of the previous quick tests then lets abort before going through with the test kitchen

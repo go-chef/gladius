@@ -36,7 +36,6 @@ func ReleaseCommand(env *app.Environment) cli.Command {
  *  - in any environment where cookbook is not pinned, pin it to 0.0.0
  */
 func (r *ReleaseContext) Run(c *cli.Context) {
-	log := r.log
 	if len(c.Args()) < 3 {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return
@@ -45,6 +44,11 @@ func (r *ReleaseContext) Run(c *cli.Context) {
 	cookbookVersion := c.Args()[1]
 	environmentName := c.Args()[2]
 
+	r.Do(cookbookName, cookbookVersion, environmentName)
+}
+
+func (r *ReleaseContext) Do(cookbookName, cookbookVersion, environmentName string) {
+	log := r.log
 	for _, chef := range r.cfg.ChefServers {
 		environments, err := chef.Client.Environments.List()
 		if err != nil {
@@ -56,16 +60,17 @@ func (r *ReleaseContext) Run(c *cli.Context) {
 			if thisEnvironment == "_default" {
 				continue
 			}
+
 			chefEnvironment, err := chef.Client.Environments.Get(thisEnvironment)
 			if err != nil {
 				log.Errorln(err)
 				syscall.Exit(1)
 			}
 
-			if chefEnvironment.CookbookVersions[cookbookName] == "" {
-				chefEnvironment.CookbookVersions[cookbookName] = "0.0.0"
-			} else if thisEnvironment == environmentName {
+			if thisEnvironment == environmentName {
 				chefEnvironment.CookbookVersions[cookbookName] = cookbookVersion
+			} else if chefEnvironment.CookbookVersions[cookbookName] == "" {
+				chefEnvironment.CookbookVersions[cookbookName] = "0.0.0"
 			} else {
 				continue
 			}
@@ -78,5 +83,6 @@ func (r *ReleaseContext) Run(c *cli.Context) {
 				syscall.Exit(1)
 			}
 		}
+
 	}
 }
