@@ -61,7 +61,7 @@ func (t *TestContext) Run(c *cli.Context) {
 
 	// Run rspec
 	t.log.Infoln("Executing RSpec")
-	if errs := lib.Execute("rspec", "-c", "-fd"); errs > 0 {
+	if errs := lib.Execute("chef", "exec", "rspec", "-c", "-fd"); errs > 0 {
 		t.log.Errorln("RSpec tests failed!")
 		quickErrors += errs
 	} else {
