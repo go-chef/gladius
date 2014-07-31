@@ -42,11 +42,13 @@ func (r *UploadContext) Run(c *cli.Context) {
 
 func (r *UploadContext) Do(filenames []string) {
 	log := r.log
+	errors := 0
 	for _, chefServer := range r.cfg.ChefServers {
 		for _, filename := range filenames {
 			file, err := os.Open(filename)
 			if err != nil {
 				log.Errorln(fmt.Sprintf("Unable to open %s: %s", filename, err))
+				errors += 1
 				continue
 			}
 			defer file.Close()
@@ -55,6 +57,7 @@ func (r *UploadContext) Do(filenames []string) {
 			err = json.NewDecoder(file).Decode(&v)
 			if err != nil {
 				log.Errorln(fmt.Sprintf("Invalid json in %s: %s", filename, err))
+				errors += 1
 				continue
 			}
 
@@ -63,6 +66,7 @@ func (r *UploadContext) Do(filenames []string) {
 				err = chefServer.Client.Roles.Create(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error creating role from %s: %s", filename, err))
+					errors += 1
 					continue
 				}
 				log.Infoln(fmt.Sprintf("Created the %s role on %s", v.Name, chefServer.ServerURL))
@@ -70,10 +74,14 @@ func (r *UploadContext) Do(filenames []string) {
 				err = chefServer.Client.Roles.Put(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error updating role from %s: %s", filename, err))
+					errors += 1
 					continue
 				}
 				log.Infoln(fmt.Sprintf("Updated the %s role on %s", v.Name, chefServer.ServerURL))
 			}
 		}
+	}
+	if errors != 0 {
+		os.Exit(errors)
 	}
 }
