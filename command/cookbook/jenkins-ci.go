@@ -1,6 +1,7 @@
 package cookbookcommand
 
 import (
+	"encoding/json"
 	"errors"
 	"fmt"
 	"regexp"
@@ -10,6 +11,7 @@ import (
 	"github.com/Sirupsen/logrus"
 	"github.com/bigkraig/go-gitlab/gitlab"
 	"github.com/codegangsta/cli"
+	"github.com/go-chef/chef"
 	"github.com/go-chef/gladius/app"
 	"github.com/go-chef/gladius/lib"
 )
@@ -25,9 +27,12 @@ type JenkinsCIContext struct {
 }
 
 const (
-	versionCommitMessageRegex = `.*@(\d+)\.(\d+)\.(\d+).*`
-	jenkinsCommitMessage      = "Tagged %d.%d.%d"
-	jenkinsCommitMessageRegex = `Tagged \d+\.\d+\.\d+`
+	versionCommitMessageRegex    = `.*@(\d+)\.(\d+)\.(\d+).*`
+	jenkinsCommitMessage         = "Tagged %d.%d.%d"
+	jenkinsCommitMessageRegex    = `Tagged \d+\.\d+\.\d+`
+	gitlabEnvironmentGroupName   = `chef-configurations`
+	gitlabEnvironmentProjectName = `environments`
+	autoReleaseEnvironment       = `development`
 )
 
 func JenkinsCICommand(env *app.Environment) cli.Command {
@@ -197,11 +202,64 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		}
 	}
 
-	// Release the cookbook to the development environment
-	log.Infoln(fmt.Sprintf("Releasing %s to 'development'", j.ProjectName))
-	releaseCookbook := &ReleaseContext{
-		cfg: j.cfg,
-		log: log,
+	// Release the cookbook to the autoReleaseEnvironment environment
+	log.Infoln(fmt.Sprintf("Releasing %s to '%s'", j.ProjectName, autoReleaseEnvironment))
+	environmentsRepoID, err := gitLabClient.FindProject(gitlabEnvironmentProjectName, gitlabEnvironmentGroupName)
+	if err != nil {
+		log.Errorln(err)
+		syscall.Exit(1)
 	}
-	releaseCookbook.Do(j.ProjectName, cbMetadata.Version(), "development")
+
+	files, _, err := gitLabClient.Projects.Tree(environmentsRepoID, "", "")
+	for _, file := range *files {
+		if !strings.HasSuffix(*file.Name, "json") {
+			continue
+		}
+
+		sourceContents, _, err := gitLabClient.Projects.GetFileContents(environmentsRepoID, "master", *file.Name)
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+
+		env := &chef.Environment{}
+		err = json.NewDecoder(sourceContents).Decode(&env)
+		if err != nil {
+			log.Errorln(fmt.Sprintf("Invalid json in %s: %s", *file.Name, err))
+			syscall.Exit(1)
+		}
+
+		changed := false
+		if env.Name == autoReleaseEnvironment {
+			if env.CookbookVersions[j.ProjectName] != cbMetadata.Version() {
+				changed = true
+			}
+			env.CookbookVersions[j.ProjectName] = cbMetadata.Version()
+		} else if env.CookbookVersions[j.ProjectName] == "" {
+			env.CookbookVersions[j.ProjectName] = "0.0.0"
+			changed = true
+		}
+
+		if !changed {
+			continue
+		}
+
+		p := &gitlab.ProjectFileParameters{
+			FilePath:      *file.Name,
+			BranchName:    "master",
+			CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, cbMetadata.Version(), autoReleaseEnvironment),
+		}
+
+		content, err := json.MarshalIndent(&env, "", "  ")
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+
+		_, _, err = gitLabClient.Projects.UpdateFile(environmentsRepoID, *p, content)
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+	}
 }
