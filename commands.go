@@ -28,6 +28,8 @@ func GenerateCommands() []cli.Command {
 
 	Commands = []cli.Command{
 		command.CookbookCommand(env),
+		command.EnvironmentCommand(env),
+		command.RoleCommand(env),
 		command.TestCommand(env),
 	}
 
