@@ -130,6 +130,20 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		return
 	}
 
+	if lib.NeedBerkshelfInstall(env.Workspace) {
+		log.Infoln("Executing Berkshelf install step")
+		if errs := lib.Execute("berks", "install"); errs > 0 {
+			log.Errorln("Berkshelf install failed!")
+			syscall.Exit(errs)
+		}
+	} else {
+		log.Infoln("Executing Berkshelf update step")
+		if errs := lib.Execute("berks", "update"); errs > 0 {
+			log.Errorln("Berkshelf update failed!")
+			syscall.Exit(errs)
+		}
+	}
+
 	testSuite := &TestContext{
 		cfg: j.cfg,
 		log: log,
@@ -174,20 +188,6 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	// The install and update commands dont get the custom berks configuration
 	// This may be an issue if the cookbook expects to be able to read from our internal chef server
 	// It's a complication when there are multiple chef servers to read cookbooks from
-	if lib.NeedBerkshelfInstall(env.Workspace) {
-		log.Infoln("Executing Berkshelf install step")
-		if errs := lib.Execute("berks", "install"); errs > 0 {
-			log.Errorln("Berkshelf install failed!")
-			syscall.Exit(errs)
-		}
-	} else {
-		log.Infoln("Executing Berkshelf update step")
-		if errs := lib.Execute("berks", "update"); errs > 0 {
-			log.Errorln("Berkshelf update failed!")
-			syscall.Exit(errs)
-		}
-	}
-
 	log.Infoln("Executing Berkshelf upload step")
 	for _, chefServer := range j.cfg.ChefServers {
 		file, err := lib.GenerateBerkshelfConfiguration(env.Workspace, &chefServer)
@@ -247,7 +247,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 		p := &gitlab.ProjectFileParameters{
 			FilePath:      *file.Name,
 			BranchName:    "master",
-			CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, cbMetadata.Version(), autoReleaseEnvironment),
+			CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, env.CookbookVersions[j.ProjectName], env.Name),
 		}
 
 		content, err := json.MarshalIndent(&env, "", "  ")
