@@ -63,7 +63,7 @@ func (r *UploadContext) Do(filenames []string) {
 
 			_, err = chefServer.Client.Environments.Get(v.Name)
 			if err != nil {
-				err = chefServer.Client.Environments.Create(v)
+				_, err = chefServer.Client.Environments.Create(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error creating environment from %s: %s", filename, err))
 					errors += 1
@@ -71,7 +71,7 @@ func (r *UploadContext) Do(filenames []string) {
 				}
 				log.Infoln(fmt.Sprintf("Created the %s environment on %s", v.Name, chefServer.ServerURL))
 			} else {
-				err = chefServer.Client.Environments.Put(v)
+				_, err = chefServer.Client.Environments.Put(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error updating environment from %s: %s", filename, err))
 					errors += 1

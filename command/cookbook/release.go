@@ -77,7 +77,7 @@ func (r *ReleaseContext) Do(cookbookName, cookbookVersion, environmentName strin
 
 			log.Infoln(fmt.Sprintf("Pinning %s[%s] in %s on %s", cookbookName,
 				chefEnvironment.CookbookVersions[cookbookName], thisEnvironment, chefServer.ServerURL))
-			err = chefServer.Client.Environments.Put(chefEnvironment)
+			_, err = chefServer.Client.Environments.Put(chefEnvironment)
 			if err != nil {
 				log.Errorln("err", err)
 				syscall.Exit(1)

@@ -63,7 +63,7 @@ func (r *UploadContext) Do(filenames []string) {
 
 			_, err = chefServer.Client.Roles.Get(v.Name)
 			if err != nil {
-				err = chefServer.Client.Roles.Create(v)
+				_, err = chefServer.Client.Roles.Create(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error creating role from %s: %s", filename, err))
 					errors += 1
@@ -71,7 +71,7 @@ func (r *UploadContext) Do(filenames []string) {
 				}
 				log.Infoln(fmt.Sprintf("Created the %s role on %s", v.Name, chefServer.ServerURL))
 			} else {
-				err = chefServer.Client.Roles.Put(v)
+				_, err = chefServer.Client.Roles.Put(v)
 				if err != nil {
 					log.Errorln(fmt.Sprintf("Error updating role from %s: %s", filename, err))
 					errors += 1
