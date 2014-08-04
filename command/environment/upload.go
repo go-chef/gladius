@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
@@ -23,6 +24,11 @@ func UploadCommand(env *app.Environment) cli.Command {
 		Description: "Uploads the environment(s) to the Chef server(s)",
 		Usage:       "<environment.json file(s)>",
 		Action:      c.Run,
+		Flags: []cli.Flag{
+			cli.StringFlag{
+				Name:  "server, s",
+				Usage: "target chef server"},
+		},
 	}
 
 	return *cmd
@@ -37,13 +43,14 @@ func (r *UploadContext) Run(c *cli.Context) {
 		cli.ShowCommandHelp(c, c.Command.Name)
 		return
 	}
-	r.Do(c.Args())
-}
 
-func (r *UploadContext) Do(filenames []string) {
+	filenames := c.Args()
 	log := r.log
 	errors := 0
 	for _, chefServer := range r.cfg.ChefServers {
+		if c.String("server") != "" && !strings.Contains(chefServer.ServerURL, c.String("server")) {
+			continue
+		}
 		for _, filename := range filenames {
 			file, err := os.Open(filename)
 			if err != nil {

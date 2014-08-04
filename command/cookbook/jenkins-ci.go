@@ -207,59 +207,76 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	environmentsRepoID, err := gitLabClient.FindProject(gitlabEnvironmentProjectName, gitlabEnvironmentGroupName)
 	if err != nil {
 		log.Errorln(err)
-		syscall.Exit(1)
 	}
 
-	files, _, err := gitLabClient.Projects.Tree(environmentsRepoID, "", "")
-	for _, file := range *files {
-		if !strings.HasSuffix(*file.Name, "json") {
+	gitEnvironments, _, err := gitLabClient.Projects.Tree(environmentsRepoID, "", "")
+	if err != nil {
+		log.Errorln(err)
+		syscall.Exit(1)
+	}
+	for _, gitEnvironment := range *gitEnvironments {
+		if *gitEnvironment.Type != "tree" {
 			continue
 		}
 
-		sourceContents, _, err := gitLabClient.Projects.GetFileContents(environmentsRepoID, "master", *file.Name)
+		gitFiles, _, err := gitLabClient.Projects.Tree(environmentsRepoID, *gitEnvironment.Name, "")
 		if err != nil {
 			log.Errorln(err)
 			syscall.Exit(1)
 		}
 
-		env := &chef.Environment{}
-		err = json.NewDecoder(sourceContents).Decode(&env)
-		if err != nil {
-			log.Errorln(fmt.Sprintf("Invalid json in %s: %s", *file.Name, err))
-			syscall.Exit(1)
-		}
+		for _, file := range *gitFiles {
+			if !strings.HasSuffix(*file.Name, "json") {
+				continue
+			}
 
-		changed := false
-		if env.Name == autoReleaseEnvironment {
-			if env.CookbookVersions[j.ProjectName] != cbMetadata.Version() {
+			sourceContents, _, err := gitLabClient.Projects.GetFileContents(environmentsRepoID, "master", *gitEnvironment.Name+"/"+*file.Name)
+			if err != nil {
+				log.Errorln(err)
+				syscall.Exit(1)
+			}
+
+			env := &chef.Environment{}
+			err = json.NewDecoder(sourceContents).Decode(&env)
+			if err != nil {
+				log.Errorln(fmt.Sprintf("Invalid json in %s: %s", *file.Name, err))
+				syscall.Exit(1)
+			}
+
+			changed := false
+			if env.Name == autoReleaseEnvironment {
+				if env.CookbookVersions[j.ProjectName] != cbMetadata.Version() {
+					changed = true
+				}
+				env.CookbookVersions[j.ProjectName] = cbMetadata.Version()
+			} else if env.CookbookVersions[j.ProjectName] == "" {
+				env.CookbookVersions[j.ProjectName] = "0.0.0"
 				changed = true
 			}
-			env.CookbookVersions[j.ProjectName] = cbMetadata.Version()
-		} else if env.CookbookVersions[j.ProjectName] == "" {
-			env.CookbookVersions[j.ProjectName] = "0.0.0"
-			changed = true
-		}
 
-		if !changed {
-			continue
-		}
+			if !changed {
+				continue
+			}
 
-		p := &gitlab.ProjectFileParameters{
-			FilePath:      *file.Name,
-			BranchName:    "master",
-			CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, env.CookbookVersions[j.ProjectName], env.Name),
-		}
+			p := &gitlab.ProjectFileParameters{
+				FilePath:      *file.Name,
+				BranchName:    "master",
+				CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, env.CookbookVersions[j.ProjectName], env.Name),
+			}
 
-		content, err := json.MarshalIndent(&env, "", "  ")
-		if err != nil {
-			log.Errorln(err)
-			syscall.Exit(1)
-		}
+			log.Infoln(fmt.Sprintf("Released %s[%s] to %s // %s", j.ProjectName, env.CookbookVersions[j.ProjectName], *gitEnvironment.Name, env.Name))
 
-		_, _, err = gitLabClient.Projects.UpdateFile(environmentsRepoID, *p, content)
-		if err != nil {
-			log.Errorln(err)
-			syscall.Exit(1)
+			content, err := json.MarshalIndent(&env, "", "  ")
+			if err != nil {
+				log.Errorln(err)
+				syscall.Exit(1)
+			}
+
+			_, _, err = gitLabClient.Projects.UpdateFile(environmentsRepoID, *p, content)
+			if err != nil {
+				log.Errorln(err)
+				syscall.Exit(1)
+			}
 		}
 	}
 }
