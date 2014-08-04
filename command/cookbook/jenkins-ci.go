@@ -259,7 +259,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 			}
 
 			p := &gitlab.ProjectFileParameters{
-				FilePath:      *file.Name,
+				FilePath:      *gitEnvironment.Name + "/" + *file.Name,
 				BranchName:    "master",
 				CommitMessage: fmt.Sprintf("Released %s[%s] to %s", j.ProjectName, env.CookbookVersions[j.ProjectName], env.Name),
 			}

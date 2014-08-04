@@ -1,12 +1,17 @@
 package cookbookcommand
 
 import (
+	"encoding/json"
 	"fmt"
+	"strings"
 	"syscall"
 
 	"github.com/Sirupsen/logrus"
+	"github.com/bigkraig/go-gitlab/gitlab"
 	"github.com/codegangsta/cli"
+	"github.com/go-chef/chef"
 	"github.com/go-chef/gladius/app"
+	"github.com/go-chef/gladius/lib"
 )
 
 type ReleaseContext struct {
@@ -49,40 +54,84 @@ func (r *ReleaseContext) Run(c *cli.Context) {
 
 func (r *ReleaseContext) Do(cookbookName, cookbookVersion, environmentName string) {
 	log := r.log
-	for _, chefServer := range r.cfg.ChefServers {
-		environments, err := chefServer.Client.Environments.List()
+	gitLabClient := lib.NewGitLabClient(r.cfg.APIURL, r.cfg.APISecret)
+
+	// Release the cookbook to the autoReleaseEnvironment environment
+	log.Infoln(fmt.Sprintf("Releasing %s to '%s'", cookbookName, environmentName))
+	environmentsRepoID, err := gitLabClient.FindProject(gitlabEnvironmentProjectName, gitlabEnvironmentGroupName)
+	if err != nil {
+		log.Errorln(err)
+	}
+
+	gitEnvironments, _, err := gitLabClient.Projects.Tree(environmentsRepoID, "", "")
+	if err != nil {
+		log.Errorln(err)
+		syscall.Exit(1)
+	}
+	for _, gitEnvironment := range *gitEnvironments {
+		if *gitEnvironment.Type != "tree" {
+			continue
+		}
+
+		gitFiles, _, err := gitLabClient.Projects.Tree(environmentsRepoID, *gitEnvironment.Name, "")
 		if err != nil {
 			log.Errorln(err)
 			syscall.Exit(1)
 		}
 
-		for thisEnvironment, _ := range *environments {
-			if thisEnvironment == "_default" {
+		for _, file := range *gitFiles {
+			if !strings.HasSuffix(*file.Name, "json") {
 				continue
 			}
 
-			chefEnvironment, err := chefServer.Client.Environments.Get(thisEnvironment)
+			sourceContents, _, err := gitLabClient.Projects.GetFileContents(environmentsRepoID, "master", *gitEnvironment.Name+"/"+*file.Name)
 			if err != nil {
 				log.Errorln(err)
 				syscall.Exit(1)
 			}
 
-			if thisEnvironment == environmentName {
-				chefEnvironment.CookbookVersions[cookbookName] = cookbookVersion
-			} else if chefEnvironment.CookbookVersions[cookbookName] == "" {
-				chefEnvironment.CookbookVersions[cookbookName] = "0.0.0"
-			} else {
+			env := &chef.Environment{}
+			err = json.NewDecoder(sourceContents).Decode(&env)
+			if err != nil {
+				log.Errorln(fmt.Sprintf("Invalid json in %s: %s", *file.Name, err))
+				syscall.Exit(1)
+			}
+
+			changed := false
+			if env.Name == environmentName {
+				if env.CookbookVersions[cookbookName] != cookbookVersion {
+					changed = true
+				}
+				env.CookbookVersions[cookbookName] = cookbookVersion
+			} else if env.CookbookVersions[cookbookName] == "" {
+				env.CookbookVersions[cookbookName] = "0.0.0"
+				changed = true
+			}
+
+			if !changed {
 				continue
 			}
 
-			log.Infoln(fmt.Sprintf("Pinning %s[%s] in %s on %s", cookbookName,
-				chefEnvironment.CookbookVersions[cookbookName], thisEnvironment, chefServer.ServerURL))
-			_, err = chefServer.Client.Environments.Put(chefEnvironment)
+			p := &gitlab.ProjectFileParameters{
+				FilePath:      *gitEnvironment.Name + "/" + *file.Name,
+				BranchName:    "master",
+				CommitMessage: fmt.Sprintf("Released %s[%s] to %s", cookbookName, env.CookbookVersions[cookbookName], env.Name),
+			}
+
+			log.Infoln(fmt.Sprintf("Released %s[%s] to %s // %s", cookbookName, env.CookbookVersions[cookbookName], *gitEnvironment.Name, env.Name))
+
+			content, err := json.MarshalIndent(&env, "", "  ")
 			if err != nil {
-				log.Errorln("err", err)
+				log.Errorln(err)
+				syscall.Exit(1)
+			}
+
+			_, _, err = gitLabClient.Projects.UpdateFile(environmentsRepoID, *p, content)
+			if err != nil {
+				log.Errorln(err)
 				syscall.Exit(1)
 			}
 		}
-
 	}
+
 }
