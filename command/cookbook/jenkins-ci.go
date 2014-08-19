@@ -2,7 +2,6 @@ package cookbookcommand
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -46,24 +45,6 @@ func JenkinsCICommand(env *app.Environment) cli.Command {
 	return *cmd
 }
 
-func parseJobName(jobName string) (projectName, groupName, branchName string, err error) {
-	parts := strings.Split(jobName, "__")
-
-	if len(parts) < 2 && len(parts) > 3 {
-		err = errors.New(fmt.Sprintf("Unable to determine job name from %s", jobName))
-		return
-	}
-
-	groupName = parts[0]
-	projectName = parts[1]
-
-	if len(parts) == 3 {
-		branchName = parts[2]
-	}
-
-	return
-}
-
 func isJenkinsCommit(c *gitlab.ProjectCommit) bool {
 	ok, _ := regexp.Match(jenkinsCommitMessageRegex, []byte(gitlab.Stringify(c.Title)))
 	return ok
@@ -88,7 +69,7 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	}
 	env := environment
 
-	j.ProjectName, j.GroupName, j.BranchName, err = parseJobName(env.JobName)
+	j.ProjectName, j.GroupName, j.BranchName, err = lib.ParseJenkinsJobName(env.JobName)
 	if err != nil {
 		log.Errorln(err)
 		syscall.Exit(1)
@@ -153,6 +134,11 @@ func (j *JenkinsCIContext) Run(c *cli.Context) {
 	//  This is a regular commit and it has passed the tests, we can simply exit to Jenkins now
 	if !isMergeCommit(commit) {
 		log.Infoln("Passed tests.")
+		return
+	}
+
+	if j.cfg.GitLabConfiguration.CookbookGroup != j.GroupName {
+		log.Infoln(fmt.Sprintf("This is a merge commit but %s is not %s", j.GroupName, j.cfg.GitLabConfiguration.CookbookGroup))
 		return
 	}
 

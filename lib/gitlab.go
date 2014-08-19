@@ -27,6 +27,9 @@ func (g *GitLabClient) FindProject(projectName, groupName string) (projectID int
 				return
 			}
 		}
+		if resp == nil {
+			return 0, errors.New(fmt.Sprintf("Empty response received"))
+		}
 		opts.Page = resp.NextPage
 		if resp.NextPage == 0 {
 			return 0, errors.New(fmt.Sprintf("Unable to find %s in the %s group", projectName, groupName))

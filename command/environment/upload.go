@@ -5,11 +5,13 @@ import (
 	"fmt"
 	"os"
 	"strings"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/go-chef/chef"
 	"github.com/go-chef/gladius/app"
+	"github.com/go-chef/gladius/lib"
 )
 
 type UploadContext struct {
@@ -47,6 +49,21 @@ func (r *UploadContext) Run(c *cli.Context) {
 	filenames := c.Args()
 	log := r.log
 	errors := 0
+	var GroupName string
+
+	environment, err := lib.NewJenkinsEnvironment()
+	if err == nil {
+		_, GroupName, _, err = lib.ParseJenkinsJobName(environment.JobName)
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+
+		if r.cfg.GitLabConfiguration.ConfigurationGroup != GroupName {
+			log.Infoln(fmt.Sprintf("Executed from a Jenkins build but not in the %s group.", r.cfg.GitLabConfiguration.ConfigurationGroup))
+		}
+	}
+
 	for _, chefServer := range r.cfg.ChefServers {
 		if c.String("server") != "" && !strings.Contains(chefServer.ServerURL, c.String("server")) {
 			continue
@@ -65,6 +82,10 @@ func (r *UploadContext) Run(c *cli.Context) {
 			if err != nil {
 				log.Errorln(fmt.Sprintf("Invalid json in %s: %s", filename, err))
 				errors += 1
+				continue
+			}
+
+			if r.cfg.GitLabConfiguration.ConfigurationGroup != GroupName {
 				continue
 			}
 

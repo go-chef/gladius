@@ -4,11 +4,13 @@ import (
 	"encoding/json"
 	"fmt"
 	"os"
+	"syscall"
 
 	"github.com/Sirupsen/logrus"
 	"github.com/codegangsta/cli"
 	"github.com/go-chef/chef"
 	"github.com/go-chef/gladius/app"
+	"github.com/go-chef/gladius/lib"
 )
 
 type UploadContext struct {
@@ -43,6 +45,21 @@ func (r *UploadContext) Run(c *cli.Context) {
 func (r *UploadContext) Do(filenames []string) {
 	log := r.log
 	errors := 0
+	var GroupName string
+
+	environment, err := lib.NewJenkinsEnvironment()
+	if err == nil {
+		_, GroupName, _, err = lib.ParseJenkinsJobName(environment.JobName)
+		if err != nil {
+			log.Errorln(err)
+			syscall.Exit(1)
+		}
+
+		if r.cfg.GitLabConfiguration.ConfigurationGroup != GroupName {
+			log.Infoln(fmt.Sprintf("Executed from a Jenkins build but not in the %s group.", r.cfg.GitLabConfiguration.ConfigurationGroup))
+		}
+	}
+
 	for _, chefServer := range r.cfg.ChefServers {
 		for _, filename := range filenames {
 			file, err := os.Open(filename)
@@ -60,7 +77,9 @@ func (r *UploadContext) Do(filenames []string) {
 				errors += 1
 				continue
 			}
-
+			if r.cfg.GitLabConfiguration.ConfigurationGroup != GroupName {
+				continue
+			}
 			_, err = chefServer.Client.Roles.Get(v.Name)
 			if err != nil {
 				_, err = chefServer.Client.Roles.Create(v)

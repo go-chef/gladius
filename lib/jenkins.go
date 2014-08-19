@@ -2,8 +2,10 @@ package lib
 
 import (
 	"errors"
+	"fmt"
 	"reflect"
 	"strconv"
+	"strings"
 	"syscall"
 )
 
@@ -22,6 +24,24 @@ type JenkinsEnvironment struct {
 	JobName                 string `env:"JOB_NAME"`
 	JobURL                  string `env:"JOB_URL"`
 	Workspace               string `env:"WORKSPACE"`
+}
+
+func ParseJenkinsJobName(jobName string) (projectName, groupName, branchName string, err error) {
+	parts := strings.Split(jobName, "__")
+
+	if len(parts) < 2 && len(parts) > 3 {
+		err = errors.New(fmt.Sprintf("Unable to determine job name from %s", jobName))
+		return
+	}
+
+	groupName = parts[0]
+	projectName = parts[1]
+
+	if len(parts) == 3 {
+		branchName = parts[2]
+	}
+
+	return
 }
 
 func NewJenkinsEnvironment() (*JenkinsEnvironment, error) {

@@ -26,8 +26,10 @@ type Configuration struct {
 }
 
 type GitLabConfiguration struct {
-	APIURL    string `json:"gitlab_api_url"`
-	APISecret string `json:"gitlab_api_secret"`
+	APIURL             string `json:"gitlab_api_url"`
+	APISecret          string `json:"gitlab_api_secret"`
+	ConfigurationGroup string `json:"gitlab_configuration_group"`
+	CookbookGroup      string `json:"gitlab_cookbook_group"`
 }
 
 // We may need to add support for test kitchen suites
@@ -63,8 +65,10 @@ type Platform struct {
 func mockConfiguration() *Configuration {
 	return &Configuration{
 		GitLabConfiguration: GitLabConfiguration{
-			APIURL:    "http://gitlab.example.com/api/v3",
-			APISecret: "API SECRET KEY",
+			APIURL:             "http://gitlab.example.com/api/v3",
+			APISecret:          "API SECRET KEY",
+			ConfigurationGroup: "chef-configurations",
+			CookbookGroup:      "chef-cookbooks",
 		},
 		ChefServers: []ChefServer{
 			{
