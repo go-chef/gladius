@@ -4,13 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
-	"github.com/docopt/docopt-go"
 	"github.com/kdar/factorlog"
+  "github.com/spf13/cobra"
+  "github.com/go-chef/chef"
 	"os"
 	"os/user"
 	"path/filepath"
-	"runtime"
 	"strings"
+  "io/ioutil"
 )
 
 // VERSION is the gladius version
@@ -31,20 +32,41 @@ var Config = config{}
 var stderr = factorlog.New(os.Stderr, factorlog.NewStdFormatter(`%{Color "red" "ERROR"}%{Color "yellow" "WARN"}%{Color "green" "INFO"}%{Color "cyan" "DEBUG"}%{Color "blue" "TRACE"} %{SEVERITY}: %{Message}%{Color "reset"}`))
 
 func main() {
+  gladiusMain()
+}
 
-	// Debatable weather this is worth doing or not.
-	// TODO: benchmark/profile setting and leaving GOMAXPROCS default
-	if os.Getenv("GOMAXPROCS") == "" {
-		runtime.GOMAXPROCS(runtime.NumCPU())
-	}
+func nodeList(cmd *cobra.Command, args []string){
+  fmt.Println("Chef Server URL:", Config.ServerURL)
+  fmt.Println("ClientName:", Config.ClientName)
+  fmt.Println("ClientKey:", Config.KeyPath)
+  key, err := ioutil.ReadFile(Cli)
+    if err != nil {
+      fmt.Println("Couldn't read key.pem:", err)
+    os.Exit(1)
+  }
+}
 
-	args, _ := docopt.Parse(usage(), nil, true, VERSION, false, true)
-	setlog(args["--loglevel"].(string))
+func gladiusMain() {
+  var cmdNode = &cobra.Command{
+    Use: "node",
+    Short: "Node related operations",
+    Long: "create, retrieve, update and delete node(s)",
+  }
+  var cmdNodeList = &cobra.Command{
+    Use: "list",
+    Short: "List nodes",
+    Long: "List chef nodes present",
+    Run: nodeList
+  }
 
-	configure(args["--config"].([]string))
-	stderr.Debug("Config: ", spew.Sdump(Config))
+  cmdNode.AddCommand(cmdNodeList)
+  var rootCmd = &cobra.Command{Use: "gladius"}
+  rootCmd.PersistentFlags().StringVarP(&Config.ServerURL, "server-url", "s","http://localhost:8080", "Chef server URL")
+  rootCmd.PersistentFlags().StringVarP(&Config.ClientName, "user", "u","admin", "User name, aka node name aka api client name")
+  rootCmd.PersistentFlags().StringVarP(&Config.KeyPath, "key", "k", "/etc/chef/client.pem", "Client key")
 
-	dispatch(args)
+  rootCmd.AddCommand(cmdNode)
+  rootCmd.Execute()
 }
 
 // Configure finds, parses, and loads the config.json presented by the cli args. last file loaded wins.
@@ -120,9 +142,4 @@ Objects:
 `, usr.HomeDir)
 
 	return usage
-}
-
-// dispatch maps the arg commands into their subcommands
-func dispatch(args map[string]interface{}) {
-
 }
