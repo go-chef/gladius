@@ -4,14 +4,14 @@ import (
 	"encoding/json"
 	"fmt"
 	"github.com/davecgh/go-spew/spew"
+	"github.com/go-chef/chef"
 	"github.com/kdar/factorlog"
-  "github.com/spf13/cobra"
-  "github.com/go-chef/chef"
+	"github.com/spf13/cobra"
+	"io/ioutil"
 	"os"
 	"os/user"
 	"path/filepath"
 	"strings"
-  "io/ioutil"
 )
 
 // VERSION is the gladius version
@@ -21,6 +21,7 @@ const VERSION = "0.0.1"
 type config struct {
 	ServerURL  string   `json:"server_url"`
 	ClientName string   `json:"client_name"`
+	SkipSSL    bool     `json:"skip_ssl"`
 	KeyPath    string   `json:"client_key"`
 	CookPaths  []string `json:"cook_paths"`
 }
@@ -32,41 +33,56 @@ var Config = config{}
 var stderr = factorlog.New(os.Stderr, factorlog.NewStdFormatter(`%{Color "red" "ERROR"}%{Color "yellow" "WARN"}%{Color "green" "INFO"}%{Color "cyan" "DEBUG"}%{Color "blue" "TRACE"} %{SEVERITY}: %{Message}%{Color "reset"}`))
 
 func main() {
-  gladiusMain()
+	gladiusMain()
 }
 
-func nodeList(cmd *cobra.Command, args []string){
-  fmt.Println("Chef Server URL:", Config.ServerURL)
-  fmt.Println("ClientName:", Config.ClientName)
-  fmt.Println("ClientKey:", Config.KeyPath)
-  key, err := ioutil.ReadFile(Cli)
-    if err != nil {
-      fmt.Println("Couldn't read key.pem:", err)
-    os.Exit(1)
-  }
+func chefClient() (client *chef.Client, err error) {
+	key, err := ioutil.ReadFile(Config.KeyPath)
+	if err != nil {
+		fmt.Println("Couldn't read key.pem:", err)
+		os.Exit(1)
+	}
+	return chef.NewClient(&chef.Config{
+		Name:    Config.ClientName,
+		Key:     string(key),
+		BaseURL: Config.ServerURL,
+		SkipSSL: Config.SkipSSL,
+	})
+}
+
+func nodeList(cmd *cobra.Command, args []string) {
+	client, err := chefClient()
+	nodes, err := client.Nodes.List()
+	if err != nil {
+		fmt.Println("Issue listing nodes:", err)
+	}
+	for nodeName, _ := range nodes {
+		fmt.Println(nodeName)
+	}
 }
 
 func gladiusMain() {
-  var cmdNode = &cobra.Command{
-    Use: "node",
-    Short: "Node related operations",
-    Long: "create, retrieve, update and delete node(s)",
-  }
-  var cmdNodeList = &cobra.Command{
-    Use: "list",
-    Short: "List nodes",
-    Long: "List chef nodes present",
-    Run: nodeList
-  }
+	var cmdNode = &cobra.Command{
+		Use:   "node",
+		Short: "Node related operations",
+		Long:  "create, retrieve, update and delete node(s)",
+	}
+	var cmdNodeList = &cobra.Command{
+		Use:   "list",
+		Short: "List nodes",
+		Long:  "List chef nodes present",
+		Run:   nodeList,
+	}
 
-  cmdNode.AddCommand(cmdNodeList)
-  var rootCmd = &cobra.Command{Use: "gladius"}
-  rootCmd.PersistentFlags().StringVarP(&Config.ServerURL, "server-url", "s","http://localhost:8080", "Chef server URL")
-  rootCmd.PersistentFlags().StringVarP(&Config.ClientName, "user", "u","admin", "User name, aka node name aka api client name")
-  rootCmd.PersistentFlags().StringVarP(&Config.KeyPath, "key", "k", "/etc/chef/client.pem", "Client key")
+	cmdNode.AddCommand(cmdNodeList)
+	var rootCmd = &cobra.Command{Use: "gladius"}
+	rootCmd.PersistentFlags().StringVarP(&Config.ServerURL, "server-url", "s", "http://localhost:8080", "Chef server URL")
+	rootCmd.PersistentFlags().StringVarP(&Config.ClientName, "user", "u", "admin", "User name, aka node name aka api client name")
+	rootCmd.PersistentFlags().StringVarP(&Config.KeyPath, "key", "k", "/etc/chef/client.pem", "Client key")
+	rootCmd.PersistentFlags().BoolVarP(&Config.SkipSSL, "skip-ssl", "", false, "Skip SSL verification")
 
-  rootCmd.AddCommand(cmdNode)
-  rootCmd.Execute()
+	rootCmd.AddCommand(cmdNode)
+	rootCmd.Execute()
 }
 
 // Configure finds, parses, and loads the config.json presented by the cli args. last file loaded wins.
@@ -86,7 +102,6 @@ func configure(files []string) {
 			continue
 		}
 		defer file.Close()
-
 		stderr.Info("Loading Config: ", path)
 		err = json.NewDecoder(file).Decode(&Config)
 		if err != nil {
