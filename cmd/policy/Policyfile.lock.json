@@ -1,0 +1,45 @@
+{
+  "revision_id": "edd40c30c4e0ebb3658abde4620597597d2e9c17",
+  "name": "some_policy_name",
+  "run_list": [
+      "recipe[policyfile_example_cookbook::default]"
+    ],
+  "cookbook_locks": {
+        "policyfile_demo": {
+              "version": "0.1.0",
+              "identifier": "f04cc40faf628253fe7d9566d66a1733fb1afbe9",
+              "dotted_decimal_identifier": "67638399371010690.23642238397896298.25512023620585",
+              "source": "cookbooks/policyfile_demo",
+              "cache_key": null,
+              "scm_info": {
+                      "scm": "git",
+                      "remote": "git@github.com:danielsdeleo/policyfile-jenkins-demo.git",
+                      "revision": "edd40c30c4e0ebb3658abde4620597597d2e9c17",
+                      "working_tree_clean": false,
+                      "published": false,
+                      "synchronized_remote_branches": [
+                      
+                              ]
+                    },
+              "source_options": {
+                      "path": "cookbooks/policyfile_demo"
+                    }
+            },
+                "apt": {
+                      "version": "2.6.1",
+                      "identifier": "5f7045a8aeaf6ccda3b3594258df9ee982b3a023",
+                      "dotted_decimal_identifier": "26863567272587116.57882360917678303.174725757378595",
+                      "cache_key": "apt-2.6.1-supermarket.chef.io",
+                      "origin": "https://supermarket.chef.io/api/v1/cookbooks/apt/versions/2.6.1/download",
+                      "source_options": {
+                              "artifactserver": "https://supermarket.chef.io/api/v1/cookbooks/apt/versions/2.6.1/download",
+                              "version": "2.6.1"
+                            }
+                    },
+      "policyfile_example_cookbook": {
+            "version": "1.0.0",
+            "identifier": "f04cc40faf628253fe7d9566d66a1733fb1afbe9"
+          }
+    }
+}
+
